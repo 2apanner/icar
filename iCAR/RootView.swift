@@ -5,8 +5,7 @@ struct RootView: View {
     @State private var selectedTab: Int = {
         if ProcessInfo.processInfo.arguments.contains("-tabSensors") { return 1 }
         if ProcessInfo.processInfo.arguments.contains("-tabBattery") { return 2 }
-        if ProcessInfo.processInfo.arguments.contains("-tabCoding") { return 3 }
-        if ProcessInfo.processInfo.arguments.contains("-tabTerminal") { return 4 }
+        if ProcessInfo.processInfo.arguments.contains("-tabTerminal") { return 3 }
         return 0
     }()
     
@@ -96,8 +95,6 @@ struct RootView: View {
                         case 2:
                             CodingServiceView(obd: obd)
                         case 3:
-                            BMWCodingStudioView(obd: obd)
-                        case 4:
                             FlightRecorderView(obd: obd)
                         default:
                             DiagnosticsView(obd: obd)
@@ -105,7 +102,7 @@ struct RootView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     
-                    // MARK: - Bimmer Inset Tab Bar
+                    // MARK: - Navigation Tab Bar
                     HStack(spacing: 0) {
                         AppleTabItem(
                             title: "Errors",
@@ -135,21 +132,12 @@ struct RootView: View {
                         }
                         
                         AppleTabItem(
-                            title: "Coding",
-                            icon: "slider.horizontal.3",
+                            title: "Terminal",
+                            icon: "terminal.fill",
                             isSelected: selectedTab == 3
                         ) {
                             appleHapticImpact()
                             withAnimation(Theme.appleSpring) { selectedTab = 3 }
-                        }
-                        
-                        AppleTabItem(
-                            title: "Terminal",
-                            icon: "terminal.fill",
-                            isSelected: selectedTab == 4
-                        ) {
-                            appleHapticImpact()
-                            withAnimation(Theme.appleSpring) { selectedTab = 4 }
                         }
                     }
                     .padding(.top, 8)
