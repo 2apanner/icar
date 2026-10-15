@@ -61,16 +61,37 @@ struct DiagnosticCode: Identifiable {
     var commonCauses: [String] = []
 }
 
+struct ECUErrorEntry: Identifiable {
+    let id: String
+    let code: String
+    let name: String
+    let system: String
+    var errors: [DiagnosticCode]
+    var errorCount: Int { errors.count }
+}
+
+struct ServiceResetItem: Identifiable {
+    let id: String
+    let name: String
+    let icon: String
+    var statusText: String
+    var isDue: Bool
+}
+
 struct LiveTelemetryPoint {
     var timestamp: Date
     var rpm: Double
     var speedKmh: Double
     var boostPsi: Double
     var coolantTempC: Double
+    var oilTempC: Double
+    var batteryVoltage: Double
+    var intakeAirTempC: Double
     var stftBank1Percent: Double
     var mafGps: Double
     var throttlePercent: Double
     var currentGear: Int
+    var batterySOC: Int // 0-100%
 }
 
 struct FlightLogEntry: Identifiable {

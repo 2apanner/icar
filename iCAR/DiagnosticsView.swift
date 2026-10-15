@@ -1,106 +1,46 @@
 import SwiftUI
 
+/// BimmerLink Inspired Clean Error Memory View
 struct DiagnosticsView: View {
     @ObservedObject var obd: OBDManager
+    @State private var selectedECU: ECUErrorEntry? = nil
+    @State private var showingClearConfirm = false
     @State private var showingAskAISheet = false
-    @State private var showingClearConfirmation = false
-    @State private var selectedDTC: DiagnosticCode? = nil
-    
-    // 0: All, 1: Permanent (0A), 2: Stored (03), 3: Pending (07)
-    @State private var selectedFilter = 0
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                // MARK: - Apple Large Title Navigation Header
+            VStack(spacing: 16) {
+                // MARK: - Header & Vehicle Info
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Diagnostics")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                            Text("Error Memory")
+                                .font(.system(size: 28, weight: .bold))
                                 .foregroundColor(Theme.textPrimary)
                             
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(Theme.nominal)
-                                    .frame(width: 7, height: 7)
-                                Text(vehicleSubtitle)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(Theme.textSecondary)
-                            }
+                            Text(vehicleSubtitle)
+                                .font(.system(size: 13))
+                                .foregroundColor(Theme.textSecondary)
                         }
                         
                         Spacer()
                         
-                        // Apple Readiness Pill
                         if obd.hasCompletedScan {
-                            HStack(spacing: 5) {
-                                Image(systemName: "checkmark.seal.fill")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(obd.readinessPassed == obd.readinessTotal ? Theme.nominal : Theme.warning)
-                                Text("\(obd.readinessPassed)/\(obd.readinessTotal) Ready")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundColor(Theme.textPrimary)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Theme.surfaceElevated)
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule().stroke(Theme.surfaceBorder, lineWidth: 1)
-                            )
-                        } else {
-                            HStack(spacing: 5) {
-                                Circle()
-                                    .fill(Theme.textMuted)
-                                    .frame(width: 6, height: 6)
-                                Text("Awaiting Scan")
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Theme.textMuted)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Theme.surfaceElevated)
-                            .clipShape(Capsule())
-                            .overlay(
-                                Capsule().stroke(Theme.surfaceBorder, lineWidth: 1)
-                            )
+                            Text(totalErrorsCount == 0 ? "0 Errors" : "\(totalErrorsCount) Errors")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(totalErrorsCount == 0 ? Theme.nominal : Theme.critical)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(totalErrorsCount == 0 ? Theme.nominal.opacity(0.12) : Theme.critical.opacity(0.12))
+                                .clipShape(Capsule())
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
-                .padding(.top, 4)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
                 
-                // MARK: - Hero Health Card (Apple Health / Fitness Style)
-                VStack(spacing: 16) {
-                    HStack(alignment: .center, spacing: 16) {
-                        // Diagnostic Indicator Shield Ring
-                        ZStack {
-                            Circle()
-                                .stroke(statusAccentColor.opacity(0.18), lineWidth: 6)
-                                .frame(width: 58, height: 58)
-                            
-                            Image(systemName: obd.hasCompletedScan ? (totalFaultsCount == 0 ? "checkmark.shield.fill" : "exclamationmark.shield.fill") : "sparkle.magnifyingglass")
-                                .font(.system(size: 24, weight: .semibold))
-                                .foregroundColor(statusAccentColor)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(heroTitleText)
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(Theme.textPrimary)
-                            
-                            Text(heroSubtitleText)
-                                .font(.system(size: 13))
-                                .foregroundColor(Theme.textSecondary)
-                                .lineLimit(2)
-                        }
-                        
-                        Spacer()
-                    }
-                    
-                    // Comprehensive Scan Button
+                // MARK: - Primary Action Bar (Read / Clear)
+                HStack(spacing: 12) {
                     Button {
                         appleHapticImpact()
                         obd.runQuickScan()
@@ -108,448 +48,277 @@ struct DiagnosticsView: View {
                         HStack(spacing: 8) {
                             if obd.isScanning {
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: Theme.canvas))
-                                    .scaleEffect(0.9)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.85)
                             } else {
-                                Image(systemName: "bolt.badge.checkmark.fill")
-                                    .font(.system(size: 15, weight: .bold))
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 14, weight: .bold))
                             }
                             
-                            Text(obd.isScanning ? obd.scanStatusText : (obd.hasCompletedScan ? "Re-Scan Vehicle" : "Scan Vehicle for Faults"))
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            Text(obd.isScanning ? "Scanning..." : (obd.hasCompletedScan ? "Re-read Errors" : "Read Error Memory"))
+                                .font(.system(size: 15, weight: .semibold))
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            LinearGradient(
-                                colors: [Theme.champagne, Theme.champagne.opacity(0.85)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .foregroundColor(Theme.canvas)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .shadow(color: Theme.champagne.opacity(0.25), radius: 8, x: 0, y: 4)
+                        .padding(.vertical, 12)
+                        .background(Theme.accent)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
                     }
                     .disabled(obd.isScanning)
                     
-                    if obd.isScanning {
-                        ProgressView(value: obd.scanProgress)
-                            .progressViewStyle(LinearProgressViewStyle(tint: Theme.champagne))
-                            .animation(Theme.appleSpring, value: obd.scanProgress)
+                    if obd.hasCompletedScan && totalErrorsCount > 0 {
+                        Button {
+                            appleHapticImpact()
+                            showingClearConfirm = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "trash")
+                                Text("Clear")
+                            }
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Theme.critical)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Theme.surface)
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Theme.critical.opacity(0.3), lineWidth: 1)
+                            )
+                        }
                     }
                 }
-                .frostedCard(cornerRadius: 22)
+                .padding(.horizontal, 16)
                 
-                // MARK: - Post-Scan vs Pre-Scan Content
-                if obd.hasCompletedScan {
-                    // MARK: - Apple Segmented Filter Picker
-                    HStack(spacing: 6) {
-                        AppleFilterTab(
-                            title: "All",
-                            count: totalFaultsCount,
-                            isSelected: selectedFilter == 0
-                        ) {
-                            withAnimation(Theme.appleSpring) { selectedFilter = 0 }
-                        }
-                        
-                        AppleFilterTab(
-                            title: "Permanent",
-                            count: obd.permanentDTCs.count,
-                            badgeColor: Theme.critical,
-                            isSelected: selectedFilter == 1
-                        ) {
-                            withAnimation(Theme.appleSpring) { selectedFilter = 1 }
-                        }
-                        
-                        AppleFilterTab(
-                            title: "Stored",
-                            count: obd.storedDTCs.count,
-                            badgeColor: Theme.warning,
-                            isSelected: selectedFilter == 2
-                        ) {
-                            withAnimation(Theme.appleSpring) { selectedFilter = 2 }
-                        }
-                        
-                        AppleFilterTab(
-                            title: "Pending",
-                            count: obd.pendingDTCs.count,
-                            badgeColor: Theme.warning,
-                            isSelected: selectedFilter == 3
-                        ) {
-                            withAnimation(Theme.appleSpring) { selectedFilter = 3 }
-                        }
+                if obd.isScanning {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ProgressView(value: obd.scanProgress)
+                            .progressViewStyle(LinearProgressViewStyle(tint: Theme.accent))
+                        Text(obd.scanStatusText)
+                            .font(.system(size: 12))
+                            .foregroundColor(Theme.textSecondary)
                     }
-                    
-                    // MARK: - Permanent Codes (Mode 0A) Apple Regulatory Callout
-                    if (selectedFilter == 1 || selectedFilter == 0) && !obd.permanentDTCs.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lock.shield.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(Theme.critical)
-                                Text("Permanent Faults Locked in EEPROM")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    .foregroundColor(Theme.textPrimary)
-                                Spacer()
-                                Text("CARB §1968.2")
-                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                    .foregroundColor(Theme.critical)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Theme.critical.opacity(0.15))
-                                    .clipShape(Capsule())
-                            }
+                    .padding(.horizontal, 16)
+                }
+                
+                // MARK: - Error Memory Content
+                if obd.hasCompletedScan {
+                    // Summary Banner
+                    HStack(spacing: 12) {
+                        Image(systemName: totalErrorsCount == 0 ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(totalErrorsCount == 0 ? Theme.nominal : Theme.critical)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(totalErrorsCount == 0 ? "All Control Units Clear" : "\(totalErrorsCount) Faults in \(ecusWithErrorsCount) Control Unit(s)")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(Theme.textPrimary)
                             
-                            Text("Mode 0A fault codes cannot be erased by diagnostic scanners or battery disconnects. They remain stored in vehicle non-volatile memory until physical repairs are completed and multiple drive cycles pass.")
+                            Text(totalErrorsCount == 0 ? "No error entries stored in vehicle memory." : "Tap an ECU below to inspect fault code details and freeze frames.")
                                 .font(.system(size: 12))
                                 .foregroundColor(Theme.textSecondary)
-                                .lineSpacing(3)
                         }
-                        .padding(16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(Theme.critical.opacity(0.08))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Theme.critical.opacity(0.25), lineWidth: 1)
-                        )
-                    }
-                    
-                    // MARK: - Grouped Fault Codes List (Apple Inset Style)
-                    VStack(spacing: 10) {
-                        let activeList = filteredDTCList
                         
-                        if activeList.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 36))
-                                    .foregroundColor(Theme.nominal)
-                                Text(emptyFilterTitle)
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Theme.textPrimary)
-                                Text("No diagnostic trouble codes logged by the electronic control units for this category.")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(Theme.textSecondary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 20)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 36)
-                            .frostedCard(cornerRadius: 20)
-                        } else {
-                            ForEach(activeList) { dtc in
-                                Button {
-                                    appleHapticImpact()
-                                    selectedDTC = dtc
-                                } label: {
-                                    HStack(spacing: 14) {
-                                        // Status Badge Icon
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                .fill(dtc.isPermanent ? Theme.critical.opacity(0.15) : (dtc.severity == .critical ? Theme.critical.opacity(0.15) : Theme.warning.opacity(0.15)))
-                                                .frame(width: 44, height: 44)
-                                            
-                                            Image(systemName: dtc.isPermanent ? "lock.fill" : (dtc.severity == .critical ? "exclamationmark.triangle.fill" : "clock.fill"))
-                                                .font(.system(size: 18))
-                                                .foregroundColor(dtc.isPermanent ? Theme.critical : (dtc.severity == .critical ? Theme.critical : Theme.warning))
-                                        }
-                                        
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            HStack(spacing: 8) {
-                                                Text(dtc.id)
-                                                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                                                    .foregroundColor(Theme.textPrimary)
-                                                
-                                                Text(dtc.status.uppercased())
-                                                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                                                    .foregroundColor(dtc.isPermanent ? Theme.critical : Theme.champagne)
-                                                    .padding(.horizontal, 6)
-                                                    .padding(.vertical, 2)
-                                                    .background(dtc.isPermanent ? Theme.critical.opacity(0.12) : Theme.surfaceElevated)
-                                                    .clipShape(Capsule())
-                                            }
-                                            
-                                            Text(dtc.title)
-                                                .font(.system(size: 14, weight: .medium))
-                                                .foregroundColor(Theme.textPrimary)
-                                                .multilineTextAlignment(.leading)
-                                                .lineLimit(1)
-                                            
-                                            Text(dtc.system)
-                                                .font(.system(size: 12))
-                                                .foregroundColor(Theme.textSecondary)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundColor(Theme.textMuted)
-                                    }
-                                    .padding(14)
-                                    .frostedCard(cornerRadius: 18)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
+                        Spacer()
                     }
-                } else {
-                    // MARK: - Pre-Scan Unscanned State (Apple Guide View)
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(Theme.champagne.opacity(0.15))
-                                    .frame(width: 44, height: 44)
-                                Image(systemName: "info.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(Theme.champagne)
-                            }
+                    .padding(14)
+                    .background(Theme.surface)
+                    .cornerRadius(12)
+                    .padding(.horizontal, 16)
+                    
+                    // Permanent CARB Banner if applicable
+                    if !obd.permanentDTCs.isEmpty {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "lock.shield.fill")
+                                .foregroundColor(Theme.warning)
+                                .font(.system(size: 16))
+                                .padding(.top, 2)
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Awaiting Diagnostic Scan")
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                Text("Permanent Fault Codes (CARB §1968.2)")
+                                    .font(.system(size: 13, weight: .bold))
                                     .foregroundColor(Theme.textPrimary)
-                                Text("Tap 'Scan Vehicle for Faults' above to interrogate ECU memory.")
-                                    .font(.system(size: 12))
+                                Text("Permanent codes are locked in EEPROM until the fault is repaired and drive cycle self-tests pass.")
+                                    .font(.system(size: 11))
                                     .foregroundColor(Theme.textSecondary)
                             }
+                        }
+                        .padding(12)
+                        .background(Theme.surfaceElevated)
+                        .cornerRadius(10)
+                        .padding(.horizontal, 16)
+                    }
+                    
+                    // Control Units Grouped List (BimmerLink Style)
+                    VStack(spacing: 8) {
+                        ForEach(obd.ecuList) { ecu in
+                            Button {
+                                appleHapticImpact()
+                                selectedECU = ecu
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: iconForECU(ecu.code))
+                                        .font(.system(size: 18))
+                                        .foregroundColor(ecu.errorCount > 0 ? Theme.critical : Theme.accent)
+                                        .frame(width: 32)
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(ecu.name)
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(Theme.textPrimary)
+                                        
+                                        Text("\(ecu.code) · \(ecu.system)")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(Theme.textSecondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    // Status Badge
+                                    Text(ecu.errorCount == 0 ? "0 errors" : "\(ecu.errorCount) error\(ecu.errorCount > 1 ? "s" : "")")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(ecu.errorCount == 0 ? Theme.nominal : Theme.critical)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(ecu.errorCount == 0 ? Theme.nominal.opacity(0.12) : Theme.critical.opacity(0.12))
+                                        .cornerRadius(6)
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(Theme.textMuted)
+                                }
+                                .padding(14)
+                                .background(Theme.surface)
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    
+                    // Ask AI Assistance Button
+                    Button {
+                        appleHapticImpact()
+                        showingAskAISheet = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                            Text("Diagnose with AI Specialist")
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Theme.surface)
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Theme.accent.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 6)
+                    
+                } else {
+                    // MARK: - Pre-Scan State
+                    VStack(spacing: 16) {
+                        Image(systemName: "stethoscope")
+                            .font(.system(size: 36))
+                            .foregroundColor(Theme.accent)
+                        
+                        VStack(spacing: 4) {
+                            Text("Error Memory Not Read")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(Theme.textPrimary)
+                            Text("Tap 'Read Error Memory' above to scan all control units for stored, pending, and permanent fault codes.")
+                                .font(.system(size: 13))
+                                .foregroundColor(Theme.textSecondary)
+                                .multilineTextAlignment(.center)
                         }
                         
                         Divider().background(Theme.surfaceBorder)
                         
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("WHAT THIS SCAN INTERROGATES:")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .foregroundColor(Theme.champagne)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("CONTROL UNITS DETECTED")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(Theme.textSecondary)
                             
-                            InspectionBullet(
-                                icon: "lock.shield.fill",
-                                color: Theme.critical,
-                                title: "Mode 0A: Permanent Faults",
-                                subtitle: "Non-volatile EEPROM codes mandated by CARB §1968.2 & EPA that cannot be cleared by reset tools."
-                            )
+                            let previewECUs = ["DME (Digital Motor Electronics)", "EGS (Transmission Control)", "DSC (Dynamic Stability Control)", "BDC (Body Domain Controller)", "KOMBI (Instrument Cluster)"]
                             
-                            InspectionBullet(
-                                icon: "exclamationmark.octagon.fill",
-                                color: Theme.critical,
-                                title: "Mode 03: Confirmed Stored Faults",
-                                subtitle: "Active emissions & powertrain faults currently triggering the Check Engine Light."
-                            )
-                            
-                            InspectionBullet(
-                                icon: "clock.badge.exclamationmark.fill",
-                                color: Theme.warning,
-                                title: "Mode 07: Pending Faults",
-                                subtitle: "Intermittent fault events logged during current or previous vehicle drive cycle."
-                            )
-                            
-                            InspectionBullet(
-                                icon: "chart.line.uptrend.xyaxis",
-                                color: Theme.champagne,
-                                title: "Mode 02: Freeze Frame Snapshots",
-                                subtitle: "Engine operating telemetry latched at the exact microsecond each fault tripped."
-                            )
-                        }
-                    }
-                    .padding(18)
-                    .frostedCard(cornerRadius: 20)
-                }
-                
-                // MARK: - Action Buttons (Ask AI & Clear) - Only Post-Scan
-                if obd.hasCompletedScan {
-                    VStack(spacing: 12) {
-                        // Apple Intelligence Style Action Button
-                        Button {
-                            appleHapticImpact()
-                            showingAskAISheet = true
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(Theme.champagne)
-                                Text("Ask AI Diagnostic Specialist")
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Theme.textPrimary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Theme.surfaceElevated)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Theme.champagne.opacity(0.35), lineWidth: 1)
-                            )
-                        }
-                        
-                        if !obd.storedDTCs.isEmpty || !obd.pendingDTCs.isEmpty {
-                            Button {
-                                appleHapticImpact()
-                                showingClearConfirmation = true
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "trash")
-                                    Text("Clear Diagnostic Memory (Mode 04)")
-                                        .font(.system(size: 13, weight: .medium))
+                            ForEach(previewECUs, id: \.self) { name in
+                                HStack {
+                                    Circle()
+                                        .fill(Theme.textMuted)
+                                        .frame(width: 6, height: 6)
+                                    Text(name)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(Theme.textSecondary)
+                                    Spacer()
+                                    Text("Ready")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Theme.textMuted)
                                 }
-                                .foregroundColor(Theme.critical)
-                                .padding(.vertical, 8)
+                                .padding(.vertical, 2)
                             }
                         }
                     }
-                    .padding(.top, 4)
-                    .padding(.bottom, 24)
+                    .padding(20)
+                    .background(Theme.surface)
+                    .cornerRadius(14)
+                    .padding(.horizontal, 16)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
         }
-        .sheet(item: $selectedDTC) { dtc in
-            AppleDTCDetailSheet(dtc: dtc)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+        .sheet(item: $selectedECU) { ecu in
+            BimmerECUDetailSheet(ecu: ecu)
         }
         .sheet(isPresented: $showingAskAISheet) {
-            AppleAskAISheet(obd: obd)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+            BimmerAskAISheet(obd: obd)
         }
-        .alert("Clear Diagnostic Trouble Codes?", isPresented: $showingClearConfirmation) {
+        .alert("Clear Error Memory?", isPresented: $showingClearConfirm) {
             Button("Cancel", role: .cancel) {}
-            Button("Clear Codes", role: .destructive) {
+            Button("Clear All", role: .destructive) {
                 appleHapticSuccess()
                 obd.clearDTCs()
             }
         } message: {
-            Text("Mode 04 resets stored and pending ECU error memory. Permanent (Mode 0A) codes are protected by EPA regulations and cannot be cleared by this tool.")
+            Text("Mode 04 resets active error memory across all ECUs. Permanent CARB §1968.2 codes cannot be cleared manually and will reset after successful drive cycles.")
         }
     }
     
-    // MARK: - Computed Properties
-    private var totalFaultsCount: Int {
+    private var totalErrorsCount: Int {
         obd.storedDTCs.count + obd.pendingDTCs.count + obd.permanentDTCs.count
+    }
+    
+    private var ecusWithErrorsCount: Int {
+        obd.ecuList.filter { $0.errorCount > 0 }.count
     }
     
     private var vehicleSubtitle: String {
         if case .connected(let profile) = obd.connectionState {
-            return "\(profile.year) \(profile.make) \(profile.model) · \(String(format: "%.1fV", profile.restingVoltage))"
+            return "\(String(profile.year)) \(profile.make) \(profile.model) · \(profile.vin)"
         }
         return "Connected Vehicle"
     }
     
-    private var heroTitleText: String {
-        if !obd.hasCompletedScan {
-            return "Scan Required"
-        }
-        if totalFaultsCount == 0 {
-            return "System Clear"
-        } else {
-            return "\(totalFaultsCount) Faults Detected"
-        }
-    }
-    
-    private var statusAccentColor: Color {
-        if !obd.hasCompletedScan {
-            return Theme.champagne
-        }
-        if totalFaultsCount == 0 {
-            return Theme.nominal
-        } else if !obd.permanentDTCs.isEmpty || !obd.storedDTCs.isEmpty {
-            return Theme.critical
-        } else {
-            return Theme.warning
-        }
-    }
-    
-    private var heroSubtitleText: String {
-        if !obd.hasCompletedScan {
-            return "Tap below to scan ECU memory for active and permanent trouble codes."
-        }
-        if totalFaultsCount == 0 {
-            return "No ECU trouble codes detected across Mode 03, 07, and 0A."
-        }
-        var parts: [String] = []
-        if !obd.permanentDTCs.isEmpty {
-            parts.append("\(obd.permanentDTCs.count) Permanent")
-        }
-        if !obd.storedDTCs.isEmpty {
-            parts.append("\(obd.storedDTCs.count) Stored")
-        }
-        if !obd.pendingDTCs.isEmpty {
-            parts.append("\(obd.pendingDTCs.count) Pending")
-        }
-        return parts.joined(separator: " · ") + " codes require attention."
-    }
-    
-    private var filteredDTCList: [DiagnosticCode] {
-        switch selectedFilter {
-        case 0:
-            return obd.permanentDTCs + obd.storedDTCs + obd.pendingDTCs
-        case 1:
-            return obd.permanentDTCs
-        case 2:
-            return obd.storedDTCs
-        case 3:
-            return obd.pendingDTCs
-        default:
-            return obd.permanentDTCs + obd.storedDTCs + obd.pendingDTCs
-        }
-    }
-    
-    private var emptyFilterTitle: String {
-        switch selectedFilter {
-        case 1: return "No Permanent Faults"
-        case 2: return "No Stored Faults"
-        case 3: return "No Pending Faults"
-        default: return "No Fault Codes Logged"
+    private func iconForECU(_ code: String) -> String {
+        switch code {
+        case "DME": return "engine.combustion.fill"
+        case "EGS": return "gearshape.2.fill"
+        case "DSC": return "car.circle.fill"
+        case "BDC": return "lightbulb.fill"
+        case "KOMBI": return "gauge.with.needle.fill"
+        case "IHKA": return "fanblades.fill"
+        case "ACSM": return "shield.fill"
+        default: return "cpu.fill"
         }
     }
 }
 
-// MARK: - Apple Filter Segment Button
-struct AppleFilterTab: View {
-    let title: String
-    let count: Int
-    var badgeColor: Color = Theme.champagne
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(title)
-                    .font(.system(size: 12, weight: isSelected ? .bold : .medium, design: .rounded))
-                    .foregroundColor(isSelected ? Theme.textPrimary : Theme.textSecondary)
-                
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundColor(isSelected ? Theme.canvas : Theme.textPrimary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(isSelected ? Theme.champagne : Theme.surfaceElevated)
-                        .clipShape(Capsule())
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(isSelected ? Theme.surfaceElevated : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(isSelected ? Theme.surfaceBorder : Color.clear, lineWidth: 1)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-// MARK: - Apple DTC Detail Sheet (Apple Health Record Style)
-struct AppleDTCDetailSheet: View {
-    let dtc: DiagnosticCode
+// MARK: - ECU Detail Sheet
+struct BimmerECUDetailSheet: View {
+    let ecu: ECUErrorEntry
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -558,167 +327,124 @@ struct AppleDTCDetailSheet: View {
                 Theme.canvas.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        // Header Title Card
-                        HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // ECU Header
+                        HStack(spacing: 12) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(dtc.isPermanent ? Theme.critical.opacity(0.18) : Theme.warning.opacity(0.18))
-                                    .frame(width: 52, height: 52)
-                                Image(systemName: dtc.isPermanent ? "lock.shield.fill" : "exclamationmark.octagon.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(dtc.isPermanent ? Theme.critical : Theme.warning)
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Theme.accent.opacity(0.12))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "cpu.fill")
+                                    .foregroundColor(Theme.accent)
+                                    .font(.system(size: 20))
                             }
                             
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(dtc.id)
-                                    .font(.system(size: 26, weight: .bold, design: .monospaced))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(ecu.name)
+                                    .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(Theme.textPrimary)
-                                Text(dtc.title)
-                                    .font(.system(size: 15, weight: .semibold))
+                                Text("\(ecu.code) · \(ecu.system)")
+                                    .font(.system(size: 12))
                                     .foregroundColor(Theme.textSecondary)
                             }
                             
                             Spacer()
                         }
-                        .padding(16)
-                        .frostedCard(cornerRadius: 20)
+                        .padding(14)
+                        .background(Theme.surface)
+                        .cornerRadius(12)
                         
-                        // Permanent Code Regulatory Warning (CARB / EPA)
-                        if dtc.isPermanent {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "lock.fill")
-                                        .foregroundColor(Theme.critical)
-                                    Text("Mode 0A Non-Erasable Status")
-                                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                                        .foregroundColor(Theme.critical)
-                                }
-                                
-                                Text("Mandated under California CARB §1968.2 and US EPA Clean Air Act. This permanent fault is anchored in ECU non-volatile memory. Diagnostic reset tools cannot erase it.")
+                        if ecu.errors.isEmpty {
+                            VStack(spacing: 10) {
+                                Image(systemName: "checkmark.shield.fill")
+                                    .font(.system(size: 32))
+                                    .foregroundColor(Theme.nominal)
+                                Text("No Faults Logged")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(Theme.textPrimary)
+                                Text("This control unit reported 0 trouble codes.")
                                     .font(.system(size: 12))
                                     .foregroundColor(Theme.textSecondary)
-                                    .lineSpacing(3)
-                                
-                                if let criteria = dtc.driveCycleResolution {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text("REQUIRED DRIVE CYCLE RESOLUTION:")
-                                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                                            .foregroundColor(Theme.champagne)
-                                        Text(criteria)
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(Theme.textPrimary)
-                                    }
-                                    .padding(10)
-                                    .background(Theme.surfaceElevated)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                }
                             }
-                            .padding(16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .fill(Theme.critical.opacity(0.10))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(Theme.critical.opacity(0.3), lineWidth: 1)
-                            )
-                        }
-                        
-                        // SAE Official Description
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("SAE OFFICIAL DESCRIPTION")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundColor(Theme.champagne)
-                            Text(dtc.saeDescription)
-                                .font(.system(size: 13))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 32)
+                            .background(Theme.surface)
+                            .cornerRadius(12)
+                        } else {
+                            Text("LOGGED FAULT CODES (\(ecu.errors.count))")
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(Theme.textSecondary)
-                                .lineSpacing(4)
-                        }
-                        .padding(16)
-                        .frostedCard(cornerRadius: 18)
-                        
-                        // Possible Causes
-                        if !dtc.commonCauses.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("LIKELY ROOT CAUSES")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundColor(Theme.champagne)
-                                
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(dtc.commonCauses, id: \.self) { cause in
-                                        HStack(alignment: .top, spacing: 10) {
-                                            Image(systemName: "wrench.fill")
-                                                .font(.system(size: 11))
-                                                .foregroundColor(Theme.champagne)
-                                                .padding(.top, 2)
-                                            Text(cause)
-                                                .font(.system(size: 13))
-                                                .foregroundColor(Theme.textPrimary)
-                                        }
+                            
+                            ForEach(ecu.errors) { dtc in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Text(dtc.id)
+                                            .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                            .foregroundColor(Theme.textPrimary)
+                                        
+                                        Spacer()
+                                        
+                                        Text(dtc.status.uppercased())
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(dtc.isPermanent ? Theme.critical : Theme.accent)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(dtc.isPermanent ? Theme.critical.opacity(0.12) : Theme.accent.opacity(0.12))
+                                            .cornerRadius(4)
                                     }
-                                }
-                            }
-                            .padding(16)
-                            .frostedCard(cornerRadius: 18)
-                        }
-                        
-                        // Mode 02 Freeze Frame Snapshot
-                        if !dtc.freezeFrame.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Text("MODE 02 FREEZE FRAME DATA")
-                                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                                        .foregroundColor(Theme.champagne)
-                                    Spacer()
-                                    Text("Recorded at Fault")
-                                        .font(.system(size: 10))
+                                    
+                                    Text(dtc.title)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(Theme.textPrimary)
+                                    
+                                    Text(dtc.saeDescription)
+                                        .font(.system(size: 12))
                                         .foregroundColor(Theme.textSecondary)
-                                }
-                                
-                                VStack(spacing: 8) {
-                                    ForEach(Array(dtc.freezeFrame.keys.sorted()), id: \.self) { key in
-                                        HStack {
-                                            Text(key)
-                                                .font(.system(size: 13))
-                                                .foregroundColor(Theme.textSecondary)
-                                            Spacer()
-                                            Text(dtc.freezeFrame[key] ?? "-")
-                                                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                                .foregroundColor(Theme.textPrimary)
-                                        }
-                                        if key != Array(dtc.freezeFrame.keys.sorted()).last {
-                                            Divider().background(Theme.surfaceBorder)
+                                    
+                                    if !dtc.freezeFrame.isEmpty {
+                                        Divider().background(Theme.surfaceBorder)
+                                        
+                                        Text("FREEZE FRAME TELEMETRY")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(Theme.accent)
+                                        
+                                        ForEach(Array(dtc.freezeFrame.keys.sorted()), id: \.self) { key in
+                                            HStack {
+                                                Text(key)
+                                                    .font(.system(size: 12))
+                                                    .foregroundColor(Theme.textSecondary)
+                                                Spacer()
+                                                Text(dtc.freezeFrame[key] ?? "-")
+                                                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                                    .foregroundColor(Theme.textPrimary)
+                                            }
                                         }
                                     }
                                 }
+                                .padding(14)
+                                .background(Theme.surface)
+                                .cornerRadius(12)
                             }
-                            .padding(16)
-                            .frostedCard(cornerRadius: 18)
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
+                    .padding(16)
                 }
             }
-            .navigationTitle("Fault Details")
+            .navigationTitle(ecu.code)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(Theme.champagne)
+                    Button("Done") { dismiss() }
+                        .foregroundColor(Theme.accent)
                 }
             }
         }
     }
 }
 
-// MARK: - Apple Ask AI Sheet (Apple Intelligence Style)
-struct AppleAskAISheet: View {
-    @ObservedObject var obd: OBDManager
+// MARK: - Ask AI Sheet
+struct BimmerAskAISheet: View {
+    let obd: OBDManager
     @Environment(\.dismiss) var dismiss
     @State private var copied = false
     
@@ -728,117 +454,47 @@ struct AppleAskAISheet: View {
                 Theme.canvas.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Theme.champagne, Theme.warning],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 44, height: 44)
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(Theme.canvas)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Diagnostic Intelligence")
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundColor(Theme.textPrimary)
-                                Text("Local-First Privacy · Anonymized VIN")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Theme.textSecondary)
-                            }
-                        }
-                        .padding(16)
-                        .frostedCard(cornerRadius: 18)
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("DIAGNOSTIC PROMPT FOR LLM")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Theme.accent)
                         
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("SYNTHESIZED DIAGNOSTIC PROMPT")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundColor(Theme.champagne)
-                            
-                            Text(obd.buildAskAIPrompt())
-                                .font(.system(size: 12, design: .monospaced))
-                                .foregroundColor(Theme.textPrimary)
-                                .lineSpacing(3)
-                                .padding(14)
-                                .background(Theme.surfaceElevated)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
-                        .padding(16)
-                        .frostedCard(cornerRadius: 18)
+                        Text(obd.buildAskAIPrompt())
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundColor(Theme.textPrimary)
+                            .padding(14)
+                            .background(Theme.surface)
+                            .cornerRadius(12)
                         
                         Button {
                             UIPasteboard.general.string = obd.buildAskAIPrompt()
                             copied = true
                             appleHapticSuccess()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                copied = false
-                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
                         } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: copied ? "checkmark" : "doc.on.doc.fill")
-                                Text(copied ? "Copied Diagnostic Prompt" : "Copy Prompt for Claude / Gemini")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                            HStack {
+                                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                                Text(copied ? "Copied to Clipboard" : "Copy Prompt for AI")
                             }
+                            .font(.system(size: 14, weight: .bold))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Theme.champagne)
-                            .foregroundColor(Theme.canvas)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .padding(.vertical, 12)
+                            .background(Theme.accent)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
+                    .padding(16)
                 }
             }
-            .navigationTitle("AI Mechanic")
+            .navigationTitle("Diagnostic AI")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                    .foregroundColor(Theme.champagne)
+                    Button("Done") { dismiss() }
+                        .foregroundColor(Theme.accent)
                 }
             }
         }
-    }
-}
-
-// MARK: - Pre-Scan Inspection Bullet
-struct InspectionBullet: View {
-    let icon: String
-    let color: Color
-    let title: String
-    let subtitle: String
-    
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(color)
-                .frame(width: 26, height: 26)
-                .background(color.opacity(0.14))
-                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                .padding(.top, 2)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(Theme.textPrimary)
-                
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundColor(Theme.textSecondary)
-                    .lineSpacing(2)
-            }
-        }
-        .padding(.vertical, 3)
     }
 }

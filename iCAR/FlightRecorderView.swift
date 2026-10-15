@@ -11,18 +11,18 @@ struct FlightRecorderView: View {
             // Header Bar
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("FLIGHT TERMINAL")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(Theme.champagne)
-                    Text("Circular 500-Line Raw ASCII Stream")
-                        .font(.system(size: 12))
-                        .foregroundColor(Theme.textSecondary)
+                    Text("RAW PROTOCOL LOG")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundColor(Theme.textMuted)
+                    Text("ELM327 / UDS Hex Stream")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.textPrimary)
                 }
                 
                 Spacer()
                 
                 HStack(spacing: 6) {
-                    FilterPill(label: "TX", isSelected: $filterTX, color: Theme.champagne)
+                    FilterPill(label: "TX", isSelected: $filterTX, color: Theme.accent)
                     FilterPill(label: "RX", isSelected: $filterRX, color: Theme.nominal)
                     FilterPill(label: "SYS", isSelected: $filterSYS, color: Theme.textSecondary)
                 }
@@ -55,7 +55,7 @@ struct FlightRecorderView: View {
                     }
                     .padding(12)
                 }
-                .background(Color.black.opacity(0.6))
+                .background(Color.black.opacity(0.75))
                 .cornerRadius(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
@@ -74,17 +74,18 @@ struct FlightRecorderView: View {
                 ShareLink(item: formattedLogText) {
                     HStack(spacing: 6) {
                         Image(systemName: "square.and.arrow.up")
-                        Text("Export Raw Flight Log")
+                        Text("Export Log")
                     }
                     .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                     .background(Theme.surfaceElevated)
-                    .foregroundColor(Theme.champagne)
+                    .foregroundColor(Theme.accent)
                     .cornerRadius(10)
                 }
                 
                 Button {
+                    appleHapticImpact()
                     obd.flightLogs.removeAll()
                 } label: {
                     Image(systemName: "trash")
@@ -126,7 +127,7 @@ struct FlightRecorderView: View {
     
     func badgeColor(for dir: FlightLogEntry.Direction) -> Color {
         switch dir {
-        case .tx: return Theme.champagne
+        case .tx: return Theme.accent
         case .rx: return Theme.nominal
         case .system: return Theme.textSecondary
         }
@@ -140,11 +141,12 @@ struct FilterPill: View {
     
     var body: some View {
         Button {
+            appleHapticImpact()
             isSelected.toggle()
         } label: {
             Text(label)
                 .font(.system(size: 10, weight: .bold))
-                .foregroundColor(isSelected ? Theme.canvas : Theme.textSecondary)
+                .foregroundColor(isSelected ? Color.white : Theme.textSecondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(isSelected ? color : Theme.surfaceElevated)

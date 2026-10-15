@@ -4,7 +4,7 @@ struct BMWCodingStudioView: View {
     @ObservedObject var obd: OBDManager
     @State private var selectedCategory: BMWCodingCategory = .engineDynamics
     @State private var selectedModule: BMWECUModule? = nil
-    @State private var selectedSeries = "F-Series (F30, F32, F80, F82)"
+    @State private var selectedSeries = "G-Series (G20, G30, G80, G82, G05)"
     @State private var codingParameters = BMWCodingCatalog.shared.parameters
     
     @State private var pendingCodeParam: BMWCodingParameter? = nil
@@ -14,35 +14,34 @@ struct BMWCodingStudioView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                // Header Banner with BMW Series Selector
-                VStack(spacing: 12) {
+            VStack(spacing: 16) {
+                // Header Series Selector
+                VStack(spacing: 10) {
                     HStack {
                         HStack(spacing: 8) {
-                            Image(systemName: "bolt.badge.clock.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(Theme.champagne)
-                            Text("BIMMER STUDIO")
-                                .font(.system(size: 16, weight: .bold))
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(Theme.accent)
+                            Text("BimmerCode Studio")
+                                .font(.system(size: 15, weight: .bold))
                                 .foregroundColor(Theme.textPrimary)
-                                .tracking(0.5)
                         }
                         
                         Spacer()
                         
-                        Text("UDS ISO 14229")
+                        Text("ISO 14229 UDS")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(Theme.champagne)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Theme.champagneSubtle)
-                            .cornerRadius(6)
+                            .foregroundColor(Theme.accent)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Theme.accentSubtle)
+                            .cornerRadius(5)
                     }
                     
                     // Vehicle Series Menu
                     Menu {
-                        Button("F-Series (F30, F32, F80, F82, F10, F20)") { selectedSeries = "F-Series (F30, F32, F80, F82)" }
-                        Button("G-Series (G20, G30, G80, G82, G05)") { selectedSeries = "G-Series (G20, G30, G80, G82)" }
+                        Button("G-Series (G20, G30, G80, G82, G05)") { selectedSeries = "G-Series (G20, G30, G80, G82, G05)" }
+                        Button("F-Series (F30, F32, F80, F82, F10, F20)") { selectedSeries = "F-Series (F30, F32, F80, F82, F10, F20)" }
                         Button("E-Series (E90, E92, E60, E70)") { selectedSeries = "E-Series (E90, E92, E60, E70)" }
                     } label: {
                         HStack {
@@ -54,57 +53,66 @@ struct BMWCodingStudioView: View {
                                 .font(.system(size: 11))
                                 .foregroundColor(Theme.textSecondary)
                         }
-                        .padding(12)
+                        .padding(10)
                         .background(Theme.surfaceElevated)
-                        .cornerRadius(10)
+                        .cornerRadius(8)
                     }
                 }
-                .padding(16)
-                .frostedCard(cornerRadius: 16)
+                .padding(14)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Theme.surfaceBorder, lineWidth: 1)
+                )
                 
                 // Category Pills Carousel
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(BMWCodingCategory.allCases) { cat in
                             Button {
+                                appleHapticImpact()
                                 selectedCategory = cat
                                 selectedModule = nil
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: cat.iconName)
-                                        .font(.system(size: 12))
+                                        .font(.system(size: 11))
                                     Text(cat.rawValue)
                                         .font(.system(size: 12, weight: .semibold))
                                 }
                                 .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(selectedCategory == cat ? Theme.champagne : Theme.surface)
-                                .foregroundColor(selectedCategory == cat ? Theme.canvas : Theme.textSecondary)
-                                .cornerRadius(10)
+                                .padding(.vertical, 7)
+                                .background(selectedCategory == cat ? Theme.accent : Theme.surface)
+                                .foregroundColor(selectedCategory == cat ? Color.white : Theme.textSecondary)
+                                .cornerRadius(8)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
+                                    RoundedRectangle(cornerRadius: 8)
                                         .stroke(Theme.surfaceBorder, lineWidth: 1)
                                 )
                             }
                         }
                     }
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 2)
                 }
                 
                 // Coding Parameters List
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text("\(selectedCategory.rawValue.uppercased()) CODING")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(Theme.champagne)
+                        Text("\(selectedCategory.rawValue.uppercased())")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(Theme.textMuted)
                             .tracking(0.5)
+                        
                         Spacer()
+                        
                         Text("\(filteredParams.count) Available")
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(Theme.textSecondary)
                     }
+                    .padding(.horizontal, 4)
                     
-                    VStack(spacing: 12) {
+                    VStack(spacing: 10) {
                         ForEach(filteredParams) { param in
                             BMWCodingParameterCard(param: param) { updatedOption in
                                 prepareCodeWrite(param: param, newOption: updatedOption)
@@ -153,7 +161,7 @@ struct BMWCodingStudioView: View {
         Task {
             try? await Task.sleep(nanoseconds: 600_000_000)
             obd.log("TX: 10 03", direction: .tx)
-            obd.log("RX: 50 03 00 32 01 F4", direction: .rx) // Positive Response
+            obd.log("RX: 50 03 00 32 01 F4", direction: .rx)
             
             await MainActor.run { writeStep = "Entering Extended Diagnostic Session (10 03)..." }
             try? await Task.sleep(nanoseconds: 600_000_000)
@@ -165,7 +173,7 @@ struct BMWCodingStudioView: View {
             
             await MainActor.run { writeStep = "Writing modified bitmask via UDS 0x2E..." }
             obd.log("TX: 2E \(param.didHex) 00 14 03", direction: .tx)
-            obd.log("RX: 6E \(param.didHex)", direction: .rx) // Write Positive
+            obd.log("RX: 6E \(param.didHex)", direction: .rx)
             try? await Task.sleep(nanoseconds: 700_000_000)
             
             await MainActor.run { writeStep = "Rebooting ECU Gateway (11 03)..." }
@@ -200,7 +208,7 @@ struct BMWCodingParameterCard: View {
                         
                         Text(param.module.shortName)
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(Theme.champagne)
+                            .foregroundColor(Theme.accent)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Theme.surfaceElevated)
@@ -228,7 +236,7 @@ struct BMWCodingParameterCard: View {
                 .foregroundColor(Theme.textSecondary)
                 .lineSpacing(2)
             
-            // Options Menu or Toggle
+            // Options Menu
             HStack {
                 Text("VALUE:")
                     .font(.system(size: 10, weight: .bold))
@@ -244,11 +252,11 @@ struct BMWCodingParameterCard: View {
                     HStack {
                         Text(param.selectedOption)
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(param.isEnabled ? Theme.champagne : Theme.textPrimary)
+                            .foregroundColor(param.isEnabled ? Theme.accent : Theme.textPrimary)
                         Spacer()
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 10))
-                            .foregroundColor(Theme.champagne)
+                            .foregroundColor(Theme.accent)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -258,7 +266,12 @@ struct BMWCodingParameterCard: View {
             }
         }
         .padding(14)
-        .frostedCard(cornerRadius: 14)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Theme.surfaceBorder, lineWidth: 1)
+        )
     }
 }
 
@@ -277,8 +290,8 @@ struct BMWEcuWriteSheet: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("CONFIRM UDS ECU WRITE")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(Theme.champagne)
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(Theme.accent)
                             .tracking(0.5)
                         Text(param.name)
                             .font(.system(size: 17, weight: .bold))
@@ -307,16 +320,21 @@ struct BMWEcuWriteSheet: View {
                     }
                 }
                 .padding(14)
-                .frostedCard(cornerRadius: 12)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Theme.surfaceBorder, lineWidth: 1)
+                )
                 
                 if isWriting {
                     VStack(spacing: 12) {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Theme.champagne))
+                            .progressViewStyle(CircularProgressViewStyle(tint: Theme.accent))
                             .scaleEffect(1.2)
                         Text(currentStep)
                             .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                            .foregroundColor(Theme.champagne)
+                            .foregroundColor(Theme.accent)
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
@@ -341,8 +359,8 @@ struct BMWEcuWriteSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Theme.champagne)
-                        .foregroundColor(Theme.canvas)
+                        .background(Theme.accent)
+                        .foregroundColor(Color.white)
                         .cornerRadius(12)
                     }
                 }
@@ -366,7 +384,7 @@ struct StepRow: View {
             Spacer()
             Text(command)
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundColor(Theme.champagne)
+                .foregroundColor(Theme.accent)
         }
     }
 }

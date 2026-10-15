@@ -2,7 +2,13 @@ import SwiftUI
 
 struct RootView: View {
     @StateObject private var obd = OBDManager()
-    @State private var selectedTab = 0
+    @State private var selectedTab: Int = {
+        if ProcessInfo.processInfo.arguments.contains("-tabSensors") { return 1 }
+        if ProcessInfo.processInfo.arguments.contains("-tabBattery") { return 2 }
+        if ProcessInfo.processInfo.arguments.contains("-tabCoding") { return 3 }
+        if ProcessInfo.processInfo.arguments.contains("-tabTerminal") { return 4 }
+        return 0
+    }()
     
     var body: some View {
         ZStack {
@@ -27,14 +33,22 @@ struct RootView: View {
                             }
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("\(profile.year) \(profile.model)")
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    .foregroundColor(Theme.textPrimary)
+                                HStack(spacing: 6) {
+                                    Text("\(String(profile.year)) \(profile.model)")
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .foregroundColor(Theme.textPrimary)
+                                    
+                                    Text("VIN: \(profile.maskedVIN)")
+                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                        .foregroundColor(Theme.textMuted)
+                                }
                                 
-                                HStack(spacing: 4) {
+                                HStack(spacing: 6) {
                                     Text(profile.protocolName)
                                     Text("·")
-                                    Text(String(format: "%.1fV", profile.restingVoltage))
+                                    Text(String(format: "%.1fV", obd.liveTelemetry.batteryVoltage > 0 ? obd.liveTelemetry.batteryVoltage : profile.restingVoltage))
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(Theme.nominal)
                                 }
                                 .font(.system(size: 11, design: .monospaced))
                                 .foregroundColor(Theme.textSecondary)
@@ -55,7 +69,7 @@ struct RootView: View {
                                 Text("Disconnect")
                                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                             }
-                            .foregroundColor(Theme.champagne)
+                            .foregroundColor(Theme.accent)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(Theme.surfaceElevated)
@@ -82,6 +96,8 @@ struct RootView: View {
                         case 2:
                             CodingServiceView(obd: obd)
                         case 3:
+                            BMWCodingStudioView(obd: obd)
+                        case 4:
                             FlightRecorderView(obd: obd)
                         default:
                             DiagnosticsView(obd: obd)
@@ -89,11 +105,11 @@ struct RootView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     
-                    // MARK: - Apple Translucent Floating Tab Bar
+                    // MARK: - Bimmer Inset Tab Bar
                     HStack(spacing: 0) {
                         AppleTabItem(
-                            title: "Diagnostics",
-                            icon: "stethoscope",
+                            title: "Errors",
+                            icon: "exclamationmark.triangle.fill",
                             isSelected: selectedTab == 0
                         ) {
                             appleHapticImpact()
@@ -101,7 +117,7 @@ struct RootView: View {
                         }
                         
                         AppleTabItem(
-                            title: "Live Data",
+                            title: "Sensors",
                             icon: "gauge.with.needle.fill",
                             isSelected: selectedTab == 1
                         ) {
@@ -110,8 +126,8 @@ struct RootView: View {
                         }
                         
                         AppleTabItem(
-                            title: "Coding & Svc",
-                            icon: "wrench.and.screwdriver.fill",
+                            title: "Battery & Svc",
+                            icon: "battery.100.bolt",
                             isSelected: selectedTab == 2
                         ) {
                             appleHapticImpact()
@@ -119,17 +135,26 @@ struct RootView: View {
                         }
                         
                         AppleTabItem(
-                            title: "Terminal",
-                            icon: "terminal.fill",
+                            title: "Coding",
+                            icon: "slider.horizontal.3",
                             isSelected: selectedTab == 3
                         ) {
                             appleHapticImpact()
                             withAnimation(Theme.appleSpring) { selectedTab = 3 }
                         }
+                        
+                        AppleTabItem(
+                            title: "Terminal",
+                            icon: "terminal.fill",
+                            isSelected: selectedTab == 4
+                        ) {
+                            appleHapticImpact()
+                            withAnimation(Theme.appleSpring) { selectedTab = 4 }
+                        }
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 22)
-                    .background(.ultraThinMaterial)
+                    .background(Theme.surface.opacity(0.95))
                     .overlay(
                         Divider().background(Theme.surfaceBorder), alignment: .top
                     )
@@ -150,12 +175,12 @@ struct AppleTabItem: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(isSelected ? Theme.champagne : Theme.textSecondary)
+                    .font(.system(size: 19, weight: isSelected ? .bold : .regular))
+                    .foregroundColor(isSelected ? Theme.accent : Theme.textMuted)
                 
                 Text(title)
                     .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
-                    .foregroundColor(isSelected ? Theme.champagne : Theme.textSecondary)
+                    .foregroundColor(isSelected ? Theme.accent : Theme.textMuted)
             }
             .frame(maxWidth: .infinity)
         }

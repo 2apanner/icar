@@ -40,23 +40,40 @@ class OBDManager: ObservableObject {
     @Published var readinessTotal: Int = 8
     @Published var supportedPIDs: Set<UInt8> = []
     
-    // Live Telemetry State
+    // Live Telemetry State (BimmerLink Sensor Values)
     @Published var liveTelemetry = LiveTelemetryPoint(
         timestamp: Date(),
         rpm: 0,
         speedKmh: 0,
         boostPsi: 0.0,
         coolantTempC: 0.0,
+        oilTempC: 0.0,
+        batteryVoltage: 12.6,
+        intakeAirTempC: 0.0,
         stftBank1Percent: 0.0,
         mafGps: 0.0,
         throttlePercent: 0.0,
-        currentGear: 1
+        currentGear: 1,
+        batterySOC: 90
     )
     @Published var rpmPeak: Double = 0
     @Published var boostPeak: Double = 0
     @Published var isLiveTelemetryRunning = false
     @Published var oscilloscopeHistory: [(time: Double, rpm: Double, boost: Double)] = []
     @Published var isOscilloscopeFrozen = false
+    
+    // BimmerLink ECU Error Modules State
+    @Published var ecuList: [ECUErrorEntry] = []
+    
+    // BimmerLink Service Resets State (Condition Based Servicing)
+    @Published var serviceItems: [ServiceResetItem] = [
+        ServiceResetItem(id: "oil", name: "Engine Oil", icon: "drop.fill", statusText: "OK · 11,000 km", isDue: false),
+        ServiceResetItem(id: "brake_fluid", name: "Brake Fluid", icon: "gauge.with.needle.fill", statusText: "OK · 18 Months", isDue: false),
+        ServiceResetItem(id: "front_brakes", name: "Front Brake Pads", icon: "circle.circle.fill", statusText: "OK · 32,000 km", isDue: false),
+        ServiceResetItem(id: "rear_brakes", name: "Rear Brake Pads", icon: "circle.circle.fill", statusText: "OK · 45,000 km", isDue: false),
+        ServiceResetItem(id: "inspection", name: "Vehicle Check", icon: "checkmark.seal.fill", statusText: "OK · 24,000 km", isDue: false)
+    ]
+    @Published var registeredBatteryType: String = "80 Ah AGM"
     
     // Coding & Service State
     @Published var codingTweaks: [VehicleCodingTweak] = [
@@ -147,7 +164,7 @@ class OBDManager: ObservableObject {
             DiscoveredAdapter(id: "vgate_ble_default", name: "Vgate iCar Pro BLE", kind: .bluetooth, detail: "GATT 000018f0 · Low Energy", rssi: -54, isRecommended: true),
             DiscoveredAdapter(id: "veepeak_ble_default", name: "Veepeak OBDCheck BLE", kind: .bluetooth, detail: "GATT 0000ffe0 · 500 kbps", rssi: -68, isRecommended: false),
             DiscoveredAdapter(id: "wifi_gateway_default", name: "Wi-Fi ELM327 Gateway", kind: .wifi, detail: "192.168.0.10:35000 · TCP", rssi: -42, isRecommended: false),
-            DiscoveredAdapter(id: "demo_simulator", name: "Virtual 2018 Golf GTI (Simulator)", kind: .demo, detail: "On-device ECU Simulation", rssi: -20, isRecommended: true)
+            DiscoveredAdapter(id: "demo_simulator", name: "Virtual BMW M3 G80 (CAN Simulator)", kind: .demo, detail: "UDS & OBD-II ECU Simulation", rssi: -20, isRecommended: true)
         ]
     }
     
@@ -294,11 +311,11 @@ class OBDManager: ObservableObject {
         log("RX: 7E8 22 57 31 32 33 34 35 36", direction: .rx)
         
         let profile = VehicleProfile(
-            vin: "WVWZZZAU1JW123456",
-            year: 2018,
-            make: "Volkswagen",
-            model: "Golf GTI (Mk7.5)",
-            engine: "2.0L TSI EA888 Gen3",
+            vin: "WBA33AY08MFA98765",
+            year: 2022,
+            make: "BMW",
+            model: "M3 Competition (G80)",
+            engine: "3.0L S58 Twin-Turbo Inline-6",
             protocolName: "ISO 15765-4 (CAN 11/500)",
             restingVoltage: 12.6
         )
@@ -409,11 +426,15 @@ class OBDManager: ObservableObject {
             rpm: currentRpm,
             speedKmh: currentRpm * 0.035,
             boostPsi: currentBoost,
-            coolantTempC: 91.0,
+            coolantTempC: 89.0 + sin(simulationClock * 0.05) * 2.0,
+            oilTempC: 94.0 + sin(simulationClock * 0.03) * 3.0,
+            batteryVoltage: 14.1 + sin(simulationClock * 0.2) * 0.15,
+            intakeAirTempC: 22.0 + sin(simulationClock * 0.08) * 1.5,
             stftBank1Percent: 2.5 + sin(simulationClock * 2.0) * 4.0,
             mafGps: maf,
             throttlePercent: throttle,
-            currentGear: currentRpm < 2500 ? 2 : 3
+            currentGear: currentRpm < 2500 ? 2 : 3,
+            batterySOC: 92
         )
         
         if currentRpm > rpmPeak { rpmPeak = currentRpm }
@@ -589,7 +610,9 @@ class OBDManager: ObservableObject {
             await MainActor.run {
                 self.storedDTCs.removeAll()
                 self.pendingDTCs.removeAll()
-                // NOTE: Mode 0A Permanent DTCs are NOT erased by Mode 04 per EPA/CARB mandate
+                for i in 0..<self.ecuList.count {
+                    self.ecuList[i].errors = self.ecuList[i].errors.filter { $0.isPermanent }
+                }
             }
         }
     }
@@ -733,5 +756,31 @@ class OBDManager: ObservableObject {
                 commonCauses: p0420Info.commonCauses
             )
         ]
+        
+        self.ecuList = [
+            ECUErrorEntry(id: "DME", code: "DME", name: "Digital Motor Electronics", system: "Engine Management", errors: self.permanentDTCs + self.storedDTCs),
+            ECUErrorEntry(id: "EGS", code: "EGS", name: "Electronic Transmission Control", system: "8-Speed Steptronic", errors: []),
+            ECUErrorEntry(id: "DSC", code: "DSC", name: "Dynamic Stability Control", system: "Braking & Traction", errors: []),
+            ECUErrorEntry(id: "BDC", code: "BDC", name: "Body Domain Controller", system: "Body & Power Distribution", errors: self.pendingDTCs),
+            ECUErrorEntry(id: "KOMBI", code: "KOMBI", name: "Instrument Cluster", system: "Display & Gauges", errors: []),
+            ECUErrorEntry(id: "IHKA", code: "IHKA", name: "Integrated Auto Climate", system: "HVAC & Conditioning", errors: []),
+            ECUErrorEntry(id: "ACSM", code: "ACSM", name: "Crash Safety Module", system: "Airbag & Safety", errors: [])
+        ]
+    }
+    
+    func resetServiceItem(id: String) {
+        log("SERVICE: UDS 0x31 Routine Control -> Reset Service Counter [\(id)]", direction: .tx)
+        if let idx = serviceItems.firstIndex(where: { $0.id == id }) {
+            serviceItems[idx].statusText = "OK · Reset Just Now"
+            serviceItems[idx].isDue = false
+            log("SERVICE: ECU ACK 0x71 -> Reset Successful", direction: .rx)
+        }
+    }
+    
+    func registerBattery(type: String) {
+        log("BATTERY: UDS 0x2E Write Parameter [0x1015] -> Type: \(type)", direction: .tx)
+        log("BATTERY: UDS 0x31 Routine Control -> Reset Battery Aging Histogram", direction: .tx)
+        registeredBatteryType = type
+        log("BATTERY: ECU ACK -> New Battery Registered. Alternator mapping refreshed.", direction: .rx)
     }
 }

@@ -10,59 +10,48 @@ struct ConnectionView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
-                    // MARK: - Apple AirDrop / AirPods Style Radar Header
+                    // MARK: - Header
                     VStack(spacing: 16) {
                         ZStack {
-                            // Pulsing radar circles
                             Circle()
-                                .stroke(Theme.champagne.opacity(isPulsing ? 0.05 : 0.25), lineWidth: 1.5)
-                                .frame(width: isPulsing ? 130 : 80, height: isPulsing ? 130 : 80)
-                                .scaleEffect(isPulsing ? 1.2 : 0.9)
+                                .stroke(Theme.accent.opacity(isPulsing ? 0.08 : 0.3), lineWidth: 1.5)
+                                .frame(width: isPulsing ? 120 : 80, height: isPulsing ? 120 : 80)
+                                .scaleEffect(isPulsing ? 1.15 : 0.95)
                             
                             Circle()
-                                .stroke(Theme.champagne.opacity(isPulsing ? 0.1 : 0.4), lineWidth: 1.5)
-                                .frame(width: 90, height: 90)
-                            
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Theme.surfaceElevated, Theme.surface],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                                .fill(Theme.surfaceElevated)
                                 .frame(width: 68, height: 68)
                                 .overlay(
-                                    Circle().stroke(Theme.glassBorderGradient, lineWidth: 1)
+                                    Circle().stroke(Theme.surfaceBorder, lineWidth: 1)
                                 )
-                                .shadow(color: Theme.champagne.opacity(0.15), radius: 12, x: 0, y: 4)
+                                .shadow(color: Theme.accent.opacity(0.18), radius: 10, x: 0, y: 4)
                             
                             Image(systemName: "bolt.car.fill")
-                                .font(.system(size: 28, weight: .semibold))
-                                .foregroundColor(Theme.champagne)
+                                .font(.system(size: 26, weight: .semibold))
+                                .foregroundColor(Theme.accent)
                         }
-                        .padding(.top, 20)
+                        .padding(.top, 24)
                         .onAppear {
-                            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
                                 isPulsing = true
                             }
                         }
                         
                         VStack(spacing: 6) {
-                            Text("Connect to Vehicle")
-                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                            Text("Connect Adapter")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(Theme.textPrimary)
                             
-                            Text("Plug adapter into the 16-pin OBD-II port under steering column and turn ignition ON.")
+                            Text("Insert adapter into 16-pin OBD-II port & switch ignition ON.")
                                 .font(.system(size: 13))
                                 .foregroundColor(Theme.textSecondary)
                                 .multilineTextAlignment(.center)
-                                .padding(.horizontal, 24)
+                                .padding(.horizontal, 30)
                         }
                     }
                     
-                    // MARK: - Apple Segmented Picker
-                    HStack(spacing: 6) {
+                    // MARK: - Adapter Kind Segmented Control
+                    HStack(spacing: 4) {
                         ForEach(TransportKind.allCases) { kind in
                             Button {
                                 appleHapticImpact()
@@ -77,30 +66,26 @@ struct ConnectionView: View {
                                         .font(.system(size: 13, weight: obd.selectedTransport == kind ? .bold : .medium, design: .rounded))
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 9)
+                                .padding(.vertical, 8)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
                                         .fill(obd.selectedTransport == kind ? Theme.surfaceElevated : Color.clear)
                                 )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .stroke(obd.selectedTransport == kind ? Theme.surfaceBorder : Color.clear, lineWidth: 1)
-                                )
-                                .foregroundColor(obd.selectedTransport == kind ? Theme.textPrimary : Theme.textSecondary)
+                                .foregroundColor(obd.selectedTransport == kind ? Theme.textPrimary : Theme.textMuted)
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
                     }
                     .padding(4)
                     .background(Theme.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(Theme.surfaceBorder, lineWidth: 1)
                     )
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     
-                    // MARK: - Quick Test Bench Card (Apple Quick Start Card)
+                    // MARK: - Direct Connect Demo Card
                     Button {
                         appleHapticImpact()
                         if let demo = obd.discoveredAdapters.first(where: { $0.kind == .demo }) {
@@ -109,30 +94,30 @@ struct ConnectionView: View {
                     } label: {
                         HStack(spacing: 12) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Theme.champagne.opacity(0.15))
-                                    .frame(width: 46, height: 46)
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Theme.accent.opacity(0.15))
+                                    .frame(width: 44, height: 44)
                                 Image(systemName: "bolt.car.fill")
                                     .font(.system(size: 20))
-                                    .foregroundColor(Theme.champagne)
+                                    .foregroundColor(Theme.accent)
                             }
                             
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack(spacing: 6) {
-                                    Text("Virtual 2018 Golf GTI")
+                                    Text("Virtual BMW M3 (G80)")
                                         .font(.system(size: 15, weight: .bold, design: .rounded))
                                         .foregroundColor(Theme.textPrimary)
                                     
-                                    Text("DEMO")
-                                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                                        .foregroundColor(Theme.canvas)
+                                    Text("SIMULATOR")
+                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .foregroundColor(Theme.accent)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 2)
-                                        .background(Theme.champagne)
+                                        .background(Theme.accentSubtle)
                                         .clipShape(Capsule())
                                 }
                                 
-                                Text("High-fidelity test car with Mode 0A Permanent DTCs & Live Telemetry.")
+                                Text("Real CAN Bus protocol simulation: DME fault memory, live telemetry, CBS reset.")
                                     .font(.system(size: 11))
                                     .foregroundColor(Theme.textSecondary)
                                     .lineLimit(2)
@@ -143,40 +128,45 @@ struct ConnectionView: View {
                             
                             Text("Connect")
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundColor(Theme.canvas)
+                                .foregroundColor(Color.white)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 7)
-                                .background(Theme.champagne)
+                                .background(Theme.accent)
                                 .clipShape(Capsule())
                         }
                         .padding(14)
-                        .frostedCard(cornerRadius: 18)
+                        .background(Theme.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Theme.surfaceBorder, lineWidth: 1)
+                        )
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     
                     // MARK: - Discovered Hardware Adapters Section
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Text("DISCOVERED ADAPTERS")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundColor(Theme.champagne)
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(Theme.textMuted)
                                 .tracking(0.5)
                             
                             Spacer()
                             
                             HStack(spacing: 5) {
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: Theme.champagne))
+                                    .progressViewStyle(CircularProgressViewStyle(tint: Theme.accent))
                                     .scaleEffect(0.65)
-                                Text("Scanning BLE")
+                                Text("Scanning")
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(Theme.textSecondary)
                             }
                         }
                         .padding(.horizontal, 4)
                         
-                        VStack(spacing: 10) {
+                        VStack(spacing: 8) {
                             ForEach(filteredAdapters) { adapter in
                                 Button {
                                     appleHapticImpact()
@@ -184,16 +174,16 @@ struct ConnectionView: View {
                                 } label: {
                                     HStack(spacing: 12) {
                                         ZStack {
-                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                .fill(adapter.isRecommended ? Theme.champagne.opacity(0.15) : Theme.surfaceElevated)
-                                                .frame(width: 44, height: 44)
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .fill(adapter.isRecommended ? Theme.accent.opacity(0.15) : Theme.surfaceElevated)
+                                                .frame(width: 40, height: 40)
                                             
                                             Image(systemName: adapter.kind.iconName)
-                                                .font(.system(size: 18))
-                                                .foregroundColor(adapter.isRecommended ? Theme.champagne : Theme.textSecondary)
+                                                .font(.system(size: 16))
+                                                .foregroundColor(adapter.isRecommended ? Theme.accent : Theme.textSecondary)
                                         }
                                         
-                                        VStack(alignment: .leading, spacing: 3) {
+                                        VStack(alignment: .leading, spacing: 2) {
                                             HStack(spacing: 5) {
                                                 Text(adapter.name)
                                                     .font(.system(size: 14, weight: .semibold, design: .rounded))
@@ -201,9 +191,13 @@ struct ConnectionView: View {
                                                     .lineLimit(1)
                                                 
                                                 if adapter.isRecommended {
-                                                    Image(systemName: "star.fill")
-                                                        .font(.system(size: 9))
-                                                        .foregroundColor(Theme.champagne)
+                                                    Text("RECOMMENDED")
+                                                        .font(.system(size: 8, weight: .bold))
+                                                        .foregroundColor(Theme.accent)
+                                                        .padding(.horizontal, 4)
+                                                        .padding(.vertical, 1)
+                                                        .background(Theme.accentSubtle)
+                                                        .cornerRadius(3)
                                                 }
                                             }
                                             
@@ -215,7 +209,6 @@ struct ConnectionView: View {
                                         
                                         Spacer()
                                         
-                                        // Signal Strength Meter & Connect Button
                                         HStack(spacing: 8) {
                                             Image(systemName: "cellularbars", variableValue: adapter.rssi > -60 ? 1.0 : (adapter.rssi > -75 ? 0.75 : 0.5))
                                                 .font(.system(size: 12))
@@ -223,27 +216,32 @@ struct ConnectionView: View {
                                             
                                             Text("Connect")
                                                 .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                                .foregroundColor(Theme.canvas)
+                                                .foregroundColor(Color.white)
                                                 .padding(.horizontal, 12)
                                                 .padding(.vertical, 6)
-                                                .background(Theme.champagne)
+                                                .background(Theme.accent)
                                                 .clipShape(Capsule())
                                         }
                                     }
-                                    .padding(14)
-                                    .frostedCard(cornerRadius: 18)
+                                    .padding(12)
+                                    .background(Theme.surface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .stroke(Theme.surfaceBorder, lineWidth: 1)
+                                    )
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     
                     // MARK: - Connecting Modal Overlay
                     if case .connecting(let step) = obd.connectionState {
                         VStack(spacing: 12) {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: Theme.champagne))
+                                .progressViewStyle(CircularProgressViewStyle(tint: Theme.accent))
                                 .scaleEffect(1.1)
                             
                             Text(step)
@@ -253,15 +251,13 @@ struct ConnectionView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(Theme.surfaceElevated)
-                        )
+                        .background(Theme.surfaceElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Theme.champagne.opacity(0.5), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Theme.accent.opacity(0.4), lineWidth: 1)
                         )
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 16)
                     }
                     
                     Spacer(minLength: 30)
