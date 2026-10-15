@@ -6,6 +6,7 @@ struct DiagnosticsView: View {
     @State private var selectedECU: ECUErrorEntry? = nil
     @State private var showingClearConfirm = false
     @State private var showingAskAISheet = false
+    @State private var showingReportSheet: Bool = ProcessInfo.processInfo.arguments.contains("-showReportSheet")
     
     var body: some View {
         ScrollView {
@@ -26,13 +27,35 @@ struct DiagnosticsView: View {
                         Spacer()
                         
                         if obd.hasCompletedScan {
-                            Text(totalErrorsCount == 0 ? "0 Errors" : "\(totalErrorsCount) Errors")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(totalErrorsCount == 0 ? Theme.nominal : Theme.critical)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(totalErrorsCount == 0 ? Theme.nominal.opacity(0.12) : Theme.critical.opacity(0.12))
-                                .clipShape(Capsule())
+                            HStack(spacing: 8) {
+                                Button {
+                                    appleHapticImpact()
+                                    showingReportSheet = true
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "square.and.arrow.up")
+                                            .font(.system(size: 11, weight: .bold))
+                                        Text("Share")
+                                            .font(.system(size: 12, weight: .bold))
+                                    }
+                                    .foregroundColor(Theme.accent)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Theme.surfaceElevated)
+                                    .clipShape(Capsule())
+                                    .overlay(
+                                        Capsule().stroke(Theme.accent.opacity(0.3), lineWidth: 1)
+                                    )
+                                }
+                                
+                                Text(totalErrorsCount == 0 ? "0 Errors" : "\(totalErrorsCount) Errors")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(totalErrorsCount == 0 ? Theme.nominal : Theme.critical)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(totalErrorsCount == 0 ? Theme.nominal.opacity(0.12) : Theme.critical.opacity(0.12))
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
                 }
@@ -215,25 +238,47 @@ struct DiagnosticsView: View {
                     }
                     .padding(.horizontal, 16)
                     
-                    // Ask AI Assistance Button
-                    Button {
-                        appleHapticImpact()
-                        showingAskAISheet = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "sparkles")
-                            Text("Diagnose with AI Specialist")
+                    // MARK: - Post-Scan Report & AI Actions
+                    HStack(spacing: 12) {
+                        Button {
+                            appleHapticImpact()
+                            showingReportSheet = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "square.and.arrow.up")
+                                Text("Share Report")
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(Theme.accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Theme.surface)
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Theme.accent.opacity(0.3), lineWidth: 1)
+                            )
                         }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Theme.accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Theme.surface)
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Theme.accent.opacity(0.3), lineWidth: 1)
-                        )
+                        
+                        Button {
+                            appleHapticImpact()
+                            showingAskAISheet = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "sparkles")
+                                Text("AI Diagnosis")
+                            }
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(Theme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Theme.surface)
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Theme.surfaceBorder, lineWidth: 1)
+                            )
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 6)
@@ -294,6 +339,9 @@ struct DiagnosticsView: View {
         }
         .sheet(isPresented: $showingAskAISheet) {
             BimmerAskAISheet(obd: obd)
+        }
+        .sheet(isPresented: $showingReportSheet) {
+            DiagnosticReportSheet(obd: obd)
         }
         .alert(obd.checkSafetyInterlock().isSafe ? "Clear Error Memory?" : "Safety Interlock Warning", isPresented: $showingClearConfirm) {
             Button("Cancel", role: .cancel) {}
@@ -529,3 +577,166 @@ struct BimmerAskAISheet: View {
         }
     }
 }
+
+// MARK: - Diagnostic Report Sheet with Native ShareLink
+struct DiagnosticReportSheet: View {
+    @ObservedObject var obd: OBDManager
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied = false
+    
+    private var reportText: String {
+        obd.generateDiagnosticReportText()
+    }
+    
+    private var vehicleTitle: String {
+        if case .connected(let profile) = obd.connectionState {
+            return "\(profile.year) \(profile.make) \(profile.model)"
+        }
+        return "Connected Vehicle"
+    }
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Theme.canvas.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        // Report Overview Card
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "doc.text.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(Theme.accent)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Vehicle Diagnostic Report")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(Theme.textPrimary)
+                                    Text("Official OBD-II & UDS Fault Log")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(Theme.textSecondary)
+                                }
+                                
+                                Spacer()
+                                
+                                let totalCodes = obd.storedDTCs.count + obd.pendingDTCs.count + obd.permanentDTCs.count
+                                Text(totalCodes == 0 ? "PASSED" : "\(totalCodes) FAULTS")
+                                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                    .foregroundColor(totalCodes == 0 ? Theme.nominal : Theme.critical)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        (totalCodes == 0 ? Theme.nominal : Theme.critical).opacity(0.12)
+                                    )
+                                    .cornerRadius(6)
+                            }
+                            
+                            Divider().background(Theme.surfaceBorder)
+                            
+                            // Vehicle Specs Grid
+                            HStack(spacing: 16) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("VEHICLE")
+                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        .foregroundColor(Theme.textMuted)
+                                    Text(vehicleTitle)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(Theme.textPrimary)
+                                }
+                                
+                                Spacer()
+                                
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text("BATTERY")
+                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        .foregroundColor(Theme.textMuted)
+                                    Text(String(format: "%.1f V · %d%%", obd.liveTelemetry.batteryVoltage, obd.liveTelemetry.batterySOC))
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(Theme.nominal)
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .background(Theme.surface)
+                        .cornerRadius(12)
+                        
+                        // Action Buttons: Native ShareLink & Copy
+                        HStack(spacing: 12) {
+                            ShareLink(
+                                item: reportText,
+                                subject: Text("iCAR Diagnostic Report - \(vehicleTitle)"),
+                                message: Text("Attached is the comprehensive vehicle diagnostic health report for \(vehicleTitle).")
+                            ) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "square.and.arrow.up.fill")
+                                        .font(.system(size: 14))
+                                    Text("Share Report")
+                                        .font(.system(size: 14, weight: .bold))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Theme.accent)
+                                .cornerRadius(10)
+                            }
+                            
+                            Button {
+                                UIPasteboard.general.string = reportText
+                                appleHapticSuccess()
+                                copied = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                                        .font(.system(size: 14))
+                                    Text(copied ? "Copied" : "Copy Text")
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                                .foregroundColor(Theme.textPrimary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Theme.surfaceElevated)
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Theme.surfaceBorder, lineWidth: 1)
+                                )
+                            }
+                        }
+                        
+                        // Monospaced Document Preview
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("DOCUMENT PREVIEW")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(Theme.textSecondary)
+                            
+                            Text(reportText)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(Theme.textPrimary)
+                                .padding(14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Theme.surfaceElevated)
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Theme.surfaceBorder, lineWidth: 1)
+                                )
+                        }
+                    }
+                    .padding(16)
+                }
+            }
+            .navigationTitle("Diagnostic Report")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(Theme.accent)
+                        .font(.system(size: 15, weight: .semibold))
+                }
+            }
+        }
+    }
+}
+
