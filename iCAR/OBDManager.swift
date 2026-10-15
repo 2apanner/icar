@@ -592,7 +592,47 @@ class OBDManager: ObservableObject {
         }
     }
     
-    func clearDTCs() {
+    // MARK: - Automotive Safety Interlocks
+    struct SafetyCheckResult {
+        let isSafe: Bool
+        let reason: String?
+        let isEngineRunning: Bool
+        let isLowVoltage: Bool
+    }
+    
+    func checkSafetyInterlock() -> SafetyCheckResult {
+        let engineRunning = liveTelemetry.rpm > 300
+        let lowVoltage = liveTelemetry.batteryVoltage < 11.8
+        
+        if engineRunning {
+            return SafetyCheckResult(
+                isSafe: false,
+                reason: "Vehicle engine is running (\(Int(liveTelemetry.rpm)) RPM). Clearing error memory or writing adaptives while the engine is running can cause idle stumbles, sensor adaptation resets, or limp mode. Please switch engine OFF with ignition ON.",
+                isEngineRunning: true,
+                isLowVoltage: lowVoltage
+            )
+        }
+        
+        if lowVoltage {
+            return SafetyCheckResult(
+                isSafe: false,
+                reason: "Battery voltage is low (\(String(format: "%.1f", liveTelemetry.batteryVoltage))V). Modern ECUs require ≥ 12.0V during diagnostic write cycles to prevent brownout communication loss.",
+                isEngineRunning: false,
+                isLowVoltage: true
+            )
+        }
+        
+        return SafetyCheckResult(isSafe: true, reason: nil, isEngineRunning: false, isLowVoltage: false)
+    }
+    
+    func clearDTCs(force: Bool = false) {
+        let safety = checkSafetyInterlock()
+        if !safety.isSafe && !force {
+            log("SAFETY GUARD: Blocked DTC clear. Reason: \(safety.reason ?? "Interlock active")", direction: .system)
+            return
+        }
+        
+        log("SAFETY GUARD: Safety interlock passed (Engine OFF, Voltage OK). Proceeding with Mode 04.", direction: .system)
         Task {
             if let queue = self.commandQueue {
                 log("TX: 04", direction: .tx)

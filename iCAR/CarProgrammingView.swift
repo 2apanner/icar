@@ -106,6 +106,30 @@ struct CarProgrammingView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 
+                // Safety Shield Badge
+                HStack(spacing: 10) {
+                    Image(systemName: "shield.checkered")
+                        .font(.system(size: 20))
+                        .foregroundColor(Theme.nominal)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("SAFE CONFIGURATION MODE · ZERO FLASH RISK")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(Theme.nominal)
+                        Text("Changes modify high-level convenience parameters only. DME bootloader, engine maps, and powertrain firmware are strictly isolated and cannot be corrupted.")
+                            .font(.system(size: 11))
+                            .foregroundColor(Theme.textSecondary)
+                    }
+                }
+                .padding(12)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Theme.nominal.opacity(0.3), lineWidth: 1)
+                )
+                .padding(.horizontal, 16)
+                
                 // Status Overlay if applying change
                 if isApplyingChange {
                     HStack(spacing: 12) {

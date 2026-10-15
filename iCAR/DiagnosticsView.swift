@@ -39,6 +39,25 @@ struct DiagnosticsView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 
+                // MARK: - Vehicle Access Safety Guard
+                let safety = obd.checkSafetyInterlock()
+                HStack(spacing: 8) {
+                    Image(systemName: safety.isSafe ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
+                        .foregroundColor(safety.isSafe ? Theme.nominal : Theme.warning)
+                        .font(.system(size: 13))
+                    
+                    Text(safety.isSafe ? "SAFE PROTOCOL: Engine OFF · Ignition ON · \(String(format: "%.1f", obd.liveTelemetry.batteryVoltage))V" : (safety.isEngineRunning ? "SAFETY GUARD: Engine Running (\(Int(obd.liveTelemetry.rpm)) RPM) · Resets Protected" : "SAFETY GUARD: Low Battery (\(String(format: "%.1f", obd.liveTelemetry.batteryVoltage))V)"))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundColor(safety.isSafe ? Theme.textSecondary : Theme.warning)
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(safety.isSafe ? Theme.surface : Theme.warning.opacity(0.12))
+                .cornerRadius(8)
+                .padding(.horizontal, 16)
+                
                 // MARK: - Primary Action Bar (Read / Clear)
                 HStack(spacing: 12) {
                     Button {
@@ -276,14 +295,26 @@ struct DiagnosticsView: View {
         .sheet(isPresented: $showingAskAISheet) {
             BimmerAskAISheet(obd: obd)
         }
-        .alert("Clear Error Memory?", isPresented: $showingClearConfirm) {
+        .alert(obd.checkSafetyInterlock().isSafe ? "Clear Error Memory?" : "Safety Interlock Warning", isPresented: $showingClearConfirm) {
             Button("Cancel", role: .cancel) {}
-            Button("Clear All", role: .destructive) {
-                appleHapticSuccess()
-                obd.clearDTCs()
+            if obd.checkSafetyInterlock().isSafe {
+                Button("Clear All", role: .destructive) {
+                    appleHapticSuccess()
+                    obd.clearDTCs()
+                }
+            } else {
+                Button("Override & Clear", role: .destructive) {
+                    appleHapticSuccess()
+                    obd.clearDTCs(force: true)
+                }
             }
         } message: {
-            Text("Mode 04 resets active error memory across all ECUs. Permanent CARB §1968.2 codes cannot be cleared manually and will reset after successful drive cycles.")
+            let safety = obd.checkSafetyInterlock()
+            if safety.isSafe {
+                Text("Mode 04 resets active error memory across all ECUs. Permanent CARB §1968.2 codes cannot be cleared manually and will reset after successful drive cycles.")
+            } else {
+                Text(safety.reason ?? "Safety conditions not optimal. To avoid engine stumbles or ECU communication brownout, ensure Engine is OFF, Ignition is ON, and battery is healthy.")
+            }
         }
     }
     
