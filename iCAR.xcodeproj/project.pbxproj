@@ -9,18 +9,16 @@
 /* Begin PBXBuildFile section */
 		0B2508B1AB425B71B1686D73 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 27B3FBF67C2455DFB45A5EAE /* Assets.xcassets */; };
 		7A35E45DEB32508BABD66DE0 /* FlightRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */; };
-		B82A77A88D2B5AA289395ABA /* BMWCodingStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */; };
 		D0A41A44904150D1A22426D2 /* OBDManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2EF85E8345058ABBF0284ED /* OBDManager.swift */; };
 		7C63784E30F054C9AB296BD1 /* RealWiFiTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BDAB06B700500D8FC27A8E /* RealWiFiTransport.swift */; };
 		3D0CDC9E2A2955F8AC6E5B74 /* ELM327Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16A03260624A5911B091190A /* ELM327Protocol.swift */; };
 		431005E3B6D1511F8C710ABD /* ISOTPDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13F8FE675565209BCC68F38 /* ISOTPDecoder.swift */; };
 		34664574A01B5AC7BC5D3914 /* iCARApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 297C4E979A9C569494FF04F7 /* iCARApp.swift */; };
-		E3B00DCAA8BA5FACBB5B7944 /* CodingServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB209F6F23A5FE7A1A03FF5 /* CodingServiceView.swift */; };
+		E3B00DCAA8BA5FACBB5B7944 /* BatteryServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB209F6F23A5FE7A1A03FF5 /* BatteryServiceView.swift */; };
 		32E3B149A25F5F69A87BB3A2 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B931C326D4F5699A0E9E717 /* ConnectionView.swift */; };
 		974DBAE742D3569FA55F132F /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1067D0BCD3E357FCBB89CCD6 /* RootView.swift */; };
 		15D1A53B0CE45774B6D52131 /* LiveDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE57567CE72C5E56924D4EE3 /* LiveDataView.swift */; };
 		CB2F758EFF7F5D2381ADA5E6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC7A0EF2A2D588E950A6562 /* Models.swift */; };
-		B24DD414045B55959DC37C07 /* BMWCodingCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CDE3F9D5F657F3A0BF5BCC /* BMWCodingCatalog.swift */; };
 		68B84B5AA38A58919B742C8F /* RealBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A652B31F13695C91BC6138B9 /* RealBLETransport.swift */; };
 		3776A948239C5C5A85DDDA7D /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F283F0BE2D3A56B1AE943A86 /* DiagnosticsView.swift */; };
 		2DE1D1DA836B5AB8AC4B2998 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B05402A45525845843BD230 /* Theme.swift */; };
@@ -32,18 +30,16 @@
 		731878F0DE685BA9B8B767A0 /* iCAR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iCAR.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		27B3FBF67C2455DFB45A5EAE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightRecorderView.swift"; sourceTree = "<group>"; };
-		D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BMWCodingStudioView.swift"; sourceTree = "<group>"; };
 		D2EF85E8345058ABBF0284ED /* OBDManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OBDManager.swift"; sourceTree = "<group>"; };
 		69BDAB06B700500D8FC27A8E /* RealWiFiTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RealWiFiTransport.swift"; sourceTree = "<group>"; };
 		16A03260624A5911B091190A /* ELM327Protocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ELM327Protocol.swift"; sourceTree = "<group>"; };
 		E13F8FE675565209BCC68F38 /* ISOTPDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ISOTPDecoder.swift"; sourceTree = "<group>"; };
 		297C4E979A9C569494FF04F7 /* iCARApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "iCARApp.swift"; sourceTree = "<group>"; };
-		5AB209F6F23A5FE7A1A03FF5 /* CodingServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CodingServiceView.swift"; sourceTree = "<group>"; };
+		5AB209F6F23A5FE7A1A03FF5 /* BatteryServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BatteryServiceView.swift"; sourceTree = "<group>"; };
 		0B931C326D4F5699A0E9E717 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ConnectionView.swift"; sourceTree = "<group>"; };
 		1067D0BCD3E357FCBB89CCD6 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RootView.swift"; sourceTree = "<group>"; };
 		BE57567CE72C5E56924D4EE3 /* LiveDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveDataView.swift"; sourceTree = "<group>"; };
 		BCC7A0EF2A2D588E950A6562 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models.swift"; sourceTree = "<group>"; };
-		C0CDE3F9D5F657F3A0BF5BCC /* BMWCodingCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BMWCodingCatalog.swift"; sourceTree = "<group>"; };
 		A652B31F13695C91BC6138B9 /* RealBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RealBLETransport.swift"; sourceTree = "<group>"; };
 		F283F0BE2D3A56B1AE943A86 /* DiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DiagnosticsView.swift"; sourceTree = "<group>"; };
 		3B05402A45525845843BD230 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme.swift"; sourceTree = "<group>"; };
@@ -75,18 +71,16 @@
 			children = (
 				27B3FBF67C2455DFB45A5EAE /* Assets.xcassets */,
 				BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */,
-				D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */,
 				D2EF85E8345058ABBF0284ED /* OBDManager.swift */,
 				69BDAB06B700500D8FC27A8E /* RealWiFiTransport.swift */,
 				16A03260624A5911B091190A /* ELM327Protocol.swift */,
 				E13F8FE675565209BCC68F38 /* ISOTPDecoder.swift */,
 				297C4E979A9C569494FF04F7 /* iCARApp.swift */,
-				5AB209F6F23A5FE7A1A03FF5 /* CodingServiceView.swift */,
+				5AB209F6F23A5FE7A1A03FF5 /* BatteryServiceView.swift */,
 				0B931C326D4F5699A0E9E717 /* ConnectionView.swift */,
 				1067D0BCD3E357FCBB89CCD6 /* RootView.swift */,
 				BE57567CE72C5E56924D4EE3 /* LiveDataView.swift */,
 				BCC7A0EF2A2D588E950A6562 /* Models.swift */,
-				C0CDE3F9D5F657F3A0BF5BCC /* BMWCodingCatalog.swift */,
 				A652B31F13695C91BC6138B9 /* RealBLETransport.swift */,
 				F283F0BE2D3A56B1AE943A86 /* DiagnosticsView.swift */,
 				3B05402A45525845843BD230 /* Theme.swift */,
@@ -173,18 +167,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A35E45DEB32508BABD66DE0 /* FlightRecorderView.swift in Sources */,
-				B82A77A88D2B5AA289395ABA /* BMWCodingStudioView.swift in Sources */,
 				D0A41A44904150D1A22426D2 /* OBDManager.swift in Sources */,
 				7C63784E30F054C9AB296BD1 /* RealWiFiTransport.swift in Sources */,
 				3D0CDC9E2A2955F8AC6E5B74 /* ELM327Protocol.swift in Sources */,
 				431005E3B6D1511F8C710ABD /* ISOTPDecoder.swift in Sources */,
 				34664574A01B5AC7BC5D3914 /* iCARApp.swift in Sources */,
-				E3B00DCAA8BA5FACBB5B7944 /* CodingServiceView.swift in Sources */,
+				E3B00DCAA8BA5FACBB5B7944 /* BatteryServiceView.swift in Sources */,
 				32E3B149A25F5F69A87BB3A2 /* ConnectionView.swift in Sources */,
 				974DBAE742D3569FA55F132F /* RootView.swift in Sources */,
 				15D1A53B0CE45774B6D52131 /* LiveDataView.swift in Sources */,
 				CB2F758EFF7F5D2381ADA5E6 /* Models.swift in Sources */,
-				B24DD414045B55959DC37C07 /* BMWCodingCatalog.swift in Sources */,
 				68B84B5AA38A58919B742C8F /* RealBLETransport.swift in Sources */,
 				3776A948239C5C5A85DDDA7D /* DiagnosticsView.swift in Sources */,
 				2DE1D1DA836B5AB8AC4B2998 /* Theme.swift in Sources */,

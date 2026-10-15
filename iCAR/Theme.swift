@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// BMW BimmerCode / BimmerLink Inspired Clean Automotive Design System
+/// High-Precision Automotive Diagnostic Design System
 enum Theme {
     // Clean System Backgrounds (No Muddy Gold / No Clutter)
     static let canvas = Color(red: 0x0E / 255.0, green: 0x10 / 255.0, blue: 0x15 / 255.0)

@@ -93,7 +93,7 @@ struct RootView: View {
                         case 1:
                             LiveDataView(obd: obd)
                         case 2:
-                            CodingServiceView(obd: obd)
+                            BatteryServiceView(obd: obd)
                         case 3:
                             FlightRecorderView(obd: obd)
                         default:

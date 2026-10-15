@@ -106,11 +106,3 @@ struct FlightLogEntry: Identifiable {
         case system
     }
 }
-
-struct VehicleCodingTweak: Identifiable {
-    let id: String
-    let name: String
-    let category: String
-    var isEnabled: Bool
-    let description: String
-}

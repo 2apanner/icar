@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// BimmerLink Inspired Clean Battery & Service View
-struct CodingServiceView: View {
+/// Clean Battery & Condition Based Service View
+struct BatteryServiceView: View {
     @ObservedObject var obd: OBDManager
     @State private var showingBatteryRegisterConfirm = false
     @State private var selectedNewBatteryType = "90 Ah AGM"
@@ -29,7 +29,7 @@ struct CodingServiceView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 
-                // MARK: - Battery Status (BimmerLink Style)
+                // MARK: - Battery Status
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
                         Image(systemName: "battery.100.bolt")
@@ -131,7 +131,7 @@ struct CodingServiceView: View {
                 .cornerRadius(14)
                 .padding(.horizontal, 16)
                 
-                // MARK: - Condition Based Service (CBS) Resets (BimmerLink Style)
+                // MARK: - Condition Based Service (CBS) Resets
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
                         Image(systemName: "wrench.and.screwdriver.fill")

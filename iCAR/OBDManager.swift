@@ -75,14 +75,6 @@ class OBDManager: ObservableObject {
     ]
     @Published var registeredBatteryType: String = "80 Ah AGM"
     
-    // Coding & Service State
-    @Published var codingTweaks: [VehicleCodingTweak] = [
-        VehicleCodingTweak(id: "start_stop", name: "Auto Start-Stop Memory", category: "Engine / Comfort", isEnabled: true, description: "Remembers last selected Auto Start-Stop state instead of defaulting ON each ignition cycle."),
-        VehicleCodingTweak(id: "acoustic_lock", name: "Acoustic Lock Chirp", category: "Locking & Alarm", isEnabled: true, description: "Emits a short horn/siren confirmation chirp when locking vehicle via key fob."),
-        VehicleCodingTweak(id: "mirror_fold", name: "Comfort Mirror Auto-Fold", category: "Mirrors & Windows", isEnabled: false, description: "Folds side mirrors automatically upon vehicle lock and unfolds upon engine start."),
-        VehicleCodingTweak(id: "gauge_sweep", name: "Ignition Needle Staging", category: "Instrument Cluster", isEnabled: true, description: "Performs an aesthetic tachometer & speedometer needle sweep when turning on ignition.")
-    ]
-    
     // Battery Cranking Test State
     @Published var isCrankingTestRunning = false
     @Published var crankingProgress: Double = 0.0
@@ -683,14 +675,6 @@ class OBDManager: ObservableObject {
                 self.crankingResult = (minVoltage: minV, chargingVoltage: 14.2, isHealthy: minV >= 9.6)
             }
             log("BATTERY: Cranking capture complete. Min: \(String(format: "%.1f", minV))V (PASS > 9.6V). Alt: 14.2V", direction: .system)
-        }
-    }
-    
-    func toggleCodingTweak(id: String) {
-        if let idx = codingTweaks.firstIndex(where: { $0.id == id }) {
-            codingTweaks[idx].isEnabled.toggle()
-            let state = codingTweaks[idx].isEnabled ? "ENABLED" : "DISABLED"
-            log("CODING: UDS Service 0x2E Write Parameter [\(id)] -> \(state)", direction: .system)
         }
     }
     
