@@ -40,6 +40,7 @@
 ├────────────────────────────────────────────────────────────────────────┤
 │ • Generic OBD-II Modes: 01 (Live), 02 (Freeze Frame), 03 (Stored DTCs),│
 │   04 (Safe Clear + Snapshot), 07 (Pending DTCs), 09 (VIN), 0A (Perm)   │
+│ • Continuous Scan Archiving & Side-by-Side Diagnostic Diff / Compare   │
 │ • Transports: BLE (iOS/Android), Wi-Fi TCP, Android Classic Bluetooth │
 │ • 5-Tab Native Navigation: Home, Live, Codes, Logs, Settings           │
 │ • 60fps Skia Live Dashboard with Reanimated SharedValue pipeline       │
@@ -333,6 +334,45 @@ A native modal sheet that constructs a rich, privacy-controlled prompt and dispa
 └──────────────────────────────────────────────────────────┘
 ```
 
+### 6.5 Scan History & Comparison Screen (`app/screens/compare-scans.tsx`)
+A dedicated multi-scan inspection and diff tool accessible from the Logs tab or after completing a Quick Scan ("Compare with Previous").
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ ‹ Back          COMPARE DIAGNOSTIC SCANS                 │
+├──────────────────────────────────────────────────────────┤
+│ Scan A: Oct 02, 2026 (Baseline)                          │
+│ Scan B: Oct 14, 2026 (Today)                   [ Swap ⇄ ]│
+├──────────────────────────────────────────────────────────┤
+│ TROUBLE CODES DIFF                                       │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ 🔴 NEW:        P0171 (Pending) · System Too Lean     │ │
+│ │ 🟢 RESOLVED:   P0301 (Stored)  · Cylinder 1 Misfire  │ │
+│ │ ⚪ PERSISTENT: None                                  │ │
+│ └──────────────────────────────────────────────────────┘ │
+│                                                          │
+│ READINESS MONITORS TRANSITION                            │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ • EVAP System:      Incomplete ➔ READY (Passed)   ✅ │ │
+│ │ • Catalyst Monitor: READY ➔ READY (Stable)        ✅ │ │
+│ │ • O2 Sensor Heater: READY ➔ READY (Stable)        ✅ │ │
+│ └──────────────────────────────────────────────────────┘ │
+│                                                          │
+│ SENSOR BASELINE DRIFT (At Warm Idle)                     │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ Metric            Scan A       Scan B       Delta     │ │
+│ │ ─────────────────────────────────────────────────── │ │
+│ │ LTFT Bank 1       +3.2%        +18.5%       ▲ +15.3% │ │ ← Amber Flag
+│ │ STFT Bank 1       +0.8%        +4.2%        ▲  +3.4% │ │
+│ │ MAF Flow Rate     2.4 g/s      2.1 g/s      ▼ -0.3   │ │
+│ │ Coolant Temp      90 °C        91 °C        +1 °C    │ │
+│ │ Rest Battery      12.6 V       12.1 V       ▼ -0.5 V │ │ ← Voltage Aging
+│ └──────────────────────────────────────────────────────┘ │
+│                                                          │
+│ [ ✨ Ask AI: What Changed? ]    [ 📄 Share Diff PDF ]   │
+└──────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## 7. Functional Requirements (FR) Catalog
@@ -373,6 +413,25 @@ A native modal sheet that constructs a rich, privacy-controlled prompt and dispa
 - **FR-20 (Privacy-Controlled Handoff):** VIN is excluded by default from AI prompts (user can toggle on). Personal location or telemetry history is never included.
 - **FR-21 (Safety-Critical Visual Banners):** If scanned DTCs contain chassis/ABS (`C` prefix) or airbag/restraint (`B` prefix) codes, display an in-app caution banner mandating professional inspection regardless of AI interpretation.
 
+### 7.6 Continuous Scan Archiving & Comparison Engine (New)
+- **FR-22 (Continuous Scan Archiving & Sensor Baselines):**
+  - Every execution of Quick Scan or Full Scan automatically stores an immutable snapshot in SQLite. Scans are never overwritten or deleted during clears; they establish an indelible "medical history" for each vehicle.
+  - In addition to DTCs and readiness, every scan captures a **Live Sensor Baseline Snapshot** (at least 8 standard Mode 01 parameters if supported: RPM, Coolant Temp, Short & Long Term Fuel Trims Bank 1/2, MAF, MAP, Throttle Position, Fuel Rail Pressure, and Battery Voltage).
+  - Captures distance traveled since codes were last cleared (PID `0131`) and calibration verification numbers (Mode 09 CVN) where supported.
+- **FR-23 (Side-by-Side Diagnostic Diff & Comparison Engine):**
+  - Allows the user to select any two historical scans for the active vehicle (or tap a one-touch **"Compare with Last Scan"** action on the Home summary).
+  - **DTC Triaging:** Categorizes codes into:
+    - `🔴 New`: Faults present in Scan B that did not exist in Scan A.
+    - `🟢 Resolved`: Faults present in Scan A that have disappeared or cleared in Scan B.
+    - `⚪ Persistent`: Faults remaining active across both scans.
+  - **Readiness Transition Matrix:** Displays emissions monitor status changes (e.g. EVAP transitioned from `Incomplete` ➔ `Ready`, indicating completion of a required drive cycle).
+  - **Sensor Drift & Variance Detection:** Computes absolute numerical delta ($\Delta$) and percentage shift for all shared baseline sensor values. Flags significant sensor deviations with warning indicators (e.g. Long-Term Fuel Trim shifting by > 10% indicates vacuum leaks or degrading O2 sensors even before a DTC triggers).
+  - **Battery Health Aging Curve:** Chronologically plots resting voltage and cranking dip voltage across all historical scans to forecast battery failure before a no-start condition occurs.
+- **FR-24 (Differential AI Analysis & Comparative PDF Reports):**
+  - **Comparative Ask AI Prompt:** Generates targeted comparative prompts:
+    *"Between my vehicle scan on Oct 2 and today's scan on Oct 14, trouble code P0171 appeared, EVAP readiness became Ready, and Long Term Fuel Trim climbed from +3.2% to +18.5%. Coolant temp is unchanged at 90°C. What root causes explain this progressive lean drift?"*
+  - **Comparative PDF Report:** Generates a dual-column "Before & After Repair" or "Emissions Readiness Progress" inspection report for mechanics, state inspection proof, or used-car buyers.
+
 ---
 
 ## 8. Database Architecture & SQLite Schema
@@ -401,21 +460,26 @@ CREATE TABLE IF NOT EXISTS vehicles (
   created_at INTEGER NOT NULL
 );
 
--- Immutable Diagnostic Scan Snapshots
+-- Immutable Diagnostic Scan Snapshots with Sensor Baselines & Comparison Indexes
 CREATE TABLE IF NOT EXISTS scans (
   id TEXT PRIMARY KEY,
   vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
   scanned_at_utc INTEGER NOT NULL,
   timezone TEXT NOT NULL,
   vin_snapshot TEXT,
+  odometer_km REAL,              -- PID 0131 (dist since cleared) / user entry
   mil_on INTEGER NOT NULL CHECK(mil_on IN (0, 1)),
   dtc_count INTEGER NOT NULL,
-  dtcs_json TEXT NOT NULL,
-  freeze_frame_json TEXT,
-  readiness_json TEXT,
-  battery_volts REAL,
+  dtcs_json TEXT NOT NULL,       -- Stored, Pending, Permanent array
+  freeze_frame_json TEXT,        -- Mode 02 freeze frames
+  readiness_json TEXT,           -- Mode 01 PID 01 monitor status
+  battery_volts REAL,            -- ATRV / PID 0142
+  live_baseline_json TEXT,       -- Key Mode 01 PIDs snapshot (RPM, Coolant, STFT, LTFT, MAF, MAP, Throttle, Fuel Pressure)
+  cal_ids_json TEXT,             -- Mode 09 Calibration IDs
+  notes TEXT,                    -- User notes (e.g. "Post-MAF sensor replacement")
   cleared_at_utc INTEGER
 );
+CREATE INDEX IF NOT EXISTS idx_scans_vehicle_time ON scans(vehicle_id, scanned_at_utc DESC);
 
 -- Drive Sessions & Recordings
 CREATE TABLE IF NOT EXISTS recordings (
@@ -485,9 +549,11 @@ Phase 3: 60fps Skia Live Dashboard & Logging Engine (Days 17–22)
 ├── 2.0s Batched SQLite LogService recording pipeline
 └── Scrubbable session replay and CSV export
 
-Phase 4: Reports, Battery Diagnostics & Vehicle Registry (Days 23–28)
+Phase 4: Comparison Engine, Reports & Battery Diagnostics (Days 23–28)
+├── Continuous Scan Archiving with live sensor baseline capture
+├── Diagnostic Diff Engine & Compare Scans screen (app/screens/compare-scans.tsx)
+├── Comparative Ask AI prompt builder & Before/After PDF inspection report
 ├── High-rate battery cranking voltage drop test
-├── PDF diagnostic report generator (expo-print) with share sheet
 ├── Vehicle profile confirmation & garage multi-car switcher
 └── Hardening against clone adapter timing errors
 
@@ -510,3 +576,4 @@ A build milestone is deemed complete only when it meets the following objective 
 4. **Data Safety:** Destructive actions (Clearing DTCs) cannot be triggered in fewer than two explicit taps, always record a pre-clear snapshot, and immediately verify the result via an automated re-scan.
 5. **Privacy Enforcement:** Ask AI prompts strictly exclude the vehicle VIN by default and never transmit payload data across background network connections; all transfers proceed through user interaction with the native OS share sheet.
 6. **Zero Hardware Wear:** High-frequency telemetry writes execute through in-memory aggregation with transaction batching, preventing flash storage wear and thermal throttling.
+7. **Continuous Archiving & Comparison Accuracy:** Every execution of Quick Scan automatically persists an immutable record into SQLite. The Diagnostic Diff Engine accurately computes numerical delta values ($\Delta$), percentage shifts, flags sensor shifts > 10%, categorizes DTC lifecycle (`New`, `Resolved`, `Persistent`), and executes sub-second diff calculations across arbitrary scan pairs.
