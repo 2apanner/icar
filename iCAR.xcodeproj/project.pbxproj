@@ -1,0 +1,321 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7A35E45DEB32508BABD66DE0 /* FlightRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */; };
+		B82A77A88D2B5AA289395ABA /* BMWCodingStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */; };
+		D0A41A44904150D1A22426D2 /* OBDManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2EF85E8345058ABBF0284ED /* OBDManager.swift */; };
+		7C63784E30F054C9AB296BD1 /* RealWiFiTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BDAB06B700500D8FC27A8E /* RealWiFiTransport.swift */; };
+		3D0CDC9E2A2955F8AC6E5B74 /* ELM327Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16A03260624A5911B091190A /* ELM327Protocol.swift */; };
+		431005E3B6D1511F8C710ABD /* ISOTPDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13F8FE675565209BCC68F38 /* ISOTPDecoder.swift */; };
+		34664574A01B5AC7BC5D3914 /* iCARApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 297C4E979A9C569494FF04F7 /* iCARApp.swift */; };
+		E3B00DCAA8BA5FACBB5B7944 /* CodingServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AB209F6F23A5FE7A1A03FF5 /* CodingServiceView.swift */; };
+		32E3B149A25F5F69A87BB3A2 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B931C326D4F5699A0E9E717 /* ConnectionView.swift */; };
+		974DBAE742D3569FA55F132F /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1067D0BCD3E357FCBB89CCD6 /* RootView.swift */; };
+		15D1A53B0CE45774B6D52131 /* LiveDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE57567CE72C5E56924D4EE3 /* LiveDataView.swift */; };
+		CB2F758EFF7F5D2381ADA5E6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCC7A0EF2A2D588E950A6562 /* Models.swift */; };
+		B24DD414045B55959DC37C07 /* BMWCodingCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CDE3F9D5F657F3A0BF5BCC /* BMWCodingCatalog.swift */; };
+		68B84B5AA38A58919B742C8F /* RealBLETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A652B31F13695C91BC6138B9 /* RealBLETransport.swift */; };
+		3776A948239C5C5A85DDDA7D /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F283F0BE2D3A56B1AE943A86 /* DiagnosticsView.swift */; };
+		2DE1D1DA836B5AB8AC4B2998 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B05402A45525845843BD230 /* Theme.swift */; };
+		BD17FC8E23AA5D9A8EE708E1 /* BMWECUModules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E9C6888E9ED504CA9C21469 /* BMWECUModules.swift */; };
+		2711FCF3F05157EC8D7D2919 /* OBDPIDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA32E79096554598BCEF407 /* OBDPIDDecoder.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		731878F0DE685BA9B8B767A0 /* iCAR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iCAR.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightRecorderView.swift"; sourceTree = "<group>"; };
+		D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BMWCodingStudioView.swift"; sourceTree = "<group>"; };
+		D2EF85E8345058ABBF0284ED /* OBDManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OBDManager.swift"; sourceTree = "<group>"; };
+		69BDAB06B700500D8FC27A8E /* RealWiFiTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RealWiFiTransport.swift"; sourceTree = "<group>"; };
+		16A03260624A5911B091190A /* ELM327Protocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ELM327Protocol.swift"; sourceTree = "<group>"; };
+		E13F8FE675565209BCC68F38 /* ISOTPDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ISOTPDecoder.swift"; sourceTree = "<group>"; };
+		297C4E979A9C569494FF04F7 /* iCARApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "iCARApp.swift"; sourceTree = "<group>"; };
+		5AB209F6F23A5FE7A1A03FF5 /* CodingServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CodingServiceView.swift"; sourceTree = "<group>"; };
+		0B931C326D4F5699A0E9E717 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ConnectionView.swift"; sourceTree = "<group>"; };
+		1067D0BCD3E357FCBB89CCD6 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RootView.swift"; sourceTree = "<group>"; };
+		BE57567CE72C5E56924D4EE3 /* LiveDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LiveDataView.swift"; sourceTree = "<group>"; };
+		BCC7A0EF2A2D588E950A6562 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Models.swift"; sourceTree = "<group>"; };
+		C0CDE3F9D5F657F3A0BF5BCC /* BMWCodingCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BMWCodingCatalog.swift"; sourceTree = "<group>"; };
+		A652B31F13695C91BC6138B9 /* RealBLETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RealBLETransport.swift"; sourceTree = "<group>"; };
+		F283F0BE2D3A56B1AE943A86 /* DiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DiagnosticsView.swift"; sourceTree = "<group>"; };
+		3B05402A45525845843BD230 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme.swift"; sourceTree = "<group>"; };
+		0E9C6888E9ED504CA9C21469 /* BMWECUModules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BMWECUModules.swift"; sourceTree = "<group>"; };
+		6EA32E79096554598BCEF407 /* OBDPIDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OBDPIDDecoder.swift"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6A6488409A89552085AB3228 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1E9713A9E49F53E2B753C7BA = {
+			isa = PBXGroup;
+			children = (
+				C8434C67354F5A1B9ECB1C04 /* iCAR */,
+				6482FF415E775AAA81E053F4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C8434C67354F5A1B9ECB1C04 /* iCAR */ = {
+			isa = PBXGroup;
+			children = (
+				BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */,
+				D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */,
+				D2EF85E8345058ABBF0284ED /* OBDManager.swift */,
+				69BDAB06B700500D8FC27A8E /* RealWiFiTransport.swift */,
+				16A03260624A5911B091190A /* ELM327Protocol.swift */,
+				E13F8FE675565209BCC68F38 /* ISOTPDecoder.swift */,
+				297C4E979A9C569494FF04F7 /* iCARApp.swift */,
+				5AB209F6F23A5FE7A1A03FF5 /* CodingServiceView.swift */,
+				0B931C326D4F5699A0E9E717 /* ConnectionView.swift */,
+				1067D0BCD3E357FCBB89CCD6 /* RootView.swift */,
+				BE57567CE72C5E56924D4EE3 /* LiveDataView.swift */,
+				BCC7A0EF2A2D588E950A6562 /* Models.swift */,
+				C0CDE3F9D5F657F3A0BF5BCC /* BMWCodingCatalog.swift */,
+				A652B31F13695C91BC6138B9 /* RealBLETransport.swift */,
+				F283F0BE2D3A56B1AE943A86 /* DiagnosticsView.swift */,
+				3B05402A45525845843BD230 /* Theme.swift */,
+				0E9C6888E9ED504CA9C21469 /* BMWECUModules.swift */,
+				6EA32E79096554598BCEF407 /* OBDPIDDecoder.swift */,
+			);
+			path = iCAR;
+			sourceTree = "<group>";
+		};
+		6482FF415E775AAA81E053F4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				731878F0DE685BA9B8B767A0 /* iCAR.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EB13070D0AD95D24BC2878BE /* iCAR */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E4ACCB1ADFED534293BA48C5 /* Build configuration list for PBXNativeTarget "iCAR" */;
+			buildPhases = (
+				D6E007FF557658B786786C7C /* Sources */,
+				6A6488409A89552085AB3228 /* Frameworks */,
+				18BA22B213DB5F21B899F769 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = iCAR;
+			productName = iCAR;
+			productReference = 731878F0DE685BA9B8B767A0 /* iCAR.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		507C55A5A68C5478A4379FC9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					EB13070D0AD95D24BC2878BE = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 378BD11B1819508593B74E1D /* Build configuration list for PBXProject "iCAR" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 1E9713A9E49F53E2B753C7BA;
+			productRefGroup = 6482FF415E775AAA81E053F4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EB13070D0AD95D24BC2878BE /* iCAR */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		18BA22B213DB5F21B899F769 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D6E007FF557658B786786C7C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7A35E45DEB32508BABD66DE0 /* FlightRecorderView.swift in Sources */,
+				B82A77A88D2B5AA289395ABA /* BMWCodingStudioView.swift in Sources */,
+				D0A41A44904150D1A22426D2 /* OBDManager.swift in Sources */,
+				7C63784E30F054C9AB296BD1 /* RealWiFiTransport.swift in Sources */,
+				3D0CDC9E2A2955F8AC6E5B74 /* ELM327Protocol.swift in Sources */,
+				431005E3B6D1511F8C710ABD /* ISOTPDecoder.swift in Sources */,
+				34664574A01B5AC7BC5D3914 /* iCARApp.swift in Sources */,
+				E3B00DCAA8BA5FACBB5B7944 /* CodingServiceView.swift in Sources */,
+				32E3B149A25F5F69A87BB3A2 /* ConnectionView.swift in Sources */,
+				974DBAE742D3569FA55F132F /* RootView.swift in Sources */,
+				15D1A53B0CE45774B6D52131 /* LiveDataView.swift in Sources */,
+				CB2F758EFF7F5D2381ADA5E6 /* Models.swift in Sources */,
+				B24DD414045B55959DC37C07 /* BMWCodingCatalog.swift in Sources */,
+				68B84B5AA38A58919B742C8F /* RealBLETransport.swift in Sources */,
+				3776A948239C5C5A85DDDA7D /* DiagnosticsView.swift in Sources */,
+				2DE1D1DA836B5AB8AC4B2998 /* Theme.swift in Sources */,
+				BD17FC8E23AA5D9A8EE708E1 /* BMWECUModules.swift in Sources */,
+				2711FCF3F05157EC8D7D2919 /* OBDPIDDecoder.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		54408FA6BADB51889E6B459C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B0BC7221C75055B1A81749AC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		76EC5279B209523992C9613D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = iCAR;
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "iCAR uses Bluetooth to connect to automotive OBD-II diagnostic adapters.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "iCAR communicates with Wi-Fi OBD-II adapters on the local vehicle network.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.icar.diagnostic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		90A4A5187D02583DBAD60BF6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = iCAR;
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "iCAR uses Bluetooth to connect to automotive OBD-II diagnostic adapters.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "iCAR communicates with Wi-Fi OBD-II adapters on the local vehicle network.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.icar.diagnostic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		378BD11B1819508593B74E1D /* Build configuration list for PBXProject "iCAR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				54408FA6BADB51889E6B459C /* Debug */,
+				B0BC7221C75055B1A81749AC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E4ACCB1ADFED534293BA48C5 /* Build configuration list for PBXNativeTarget "iCAR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				76EC5279B209523992C9613D /* Debug */,
+				90A4A5187D02583DBAD60BF6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 507C55A5A68C5478A4379FC9 /* Project object */;
+}

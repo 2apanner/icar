@@ -2,7 +2,7 @@
 
 **Document Version:** 3.0 (Master Unified Specification)  
 **Status:** Approved Architectural Blueprint  
-**Platforms:** iOS & Android (Single Codebase: React Native + Expo Dev Client)  
+**Platforms:** iOS & Android (Single Codebase: Flutter 3.x + Dart 3, Impeller renderer)  
 **Author / Engineering Stakeholders:** iCAR Core Architecture Group  
 **Supersedes:** `car_scan_calude_plan_v2_3.md`, `Gemin4_plan.md`, `plan_chatgpt.md`
 
@@ -12,9 +12,9 @@
 
 **iCAR** is a high-performance, calm, trustworthy automotive OBD-II scanner and diagnostic suite built for mobile devices. Unlike conventional OBD apps that suffer from cluttered, dated web-view UIs, aggressive subscription paywalls, and brittle protocol handling that crashes on cheap adapter clones, iCAR is engineered to an **"Apple Automotive"** standard:
 1. **Calm, One-Tap Clarity:** One primary action on Home (**Quick Scan**) produces an immediate, plain-language vehicle health status backed by immutable diagnostic data.
-2. **Native Performance & Zero-Glare Ergonomics:** 60–120 fps hardware-accelerated gauges driven by direct UI-thread rendering (`@shopify/react-native-skia` + `react-native-reanimated`), packaged in a true OLED-black, high-contrast cabin design system.
+2. **Native Performance & Zero-Glare Ergonomics:** 60–120 fps hardware-accelerated gauges driven by direct GPU rendering (Flutter Impeller + `CustomPainter` driven by `ValueNotifier`/`Listenable` repaints), packaged in a true OLED-black, high-contrast cabin design system.
 3. **Zero Cloud API Cost & Complete Privacy:** Local-first architecture. All databases, logs, and diagnostic decoders live on-device. Advanced AI diagnostics use **Ask AI OS Handoff**—generating structured diagnostic prompts handed to the user's installed AI app (ChatGPT, Claude, Gemini) via the native system share sheet with zero backend servers or recurring API costs.
-4. **Hardened Protocol Engine:** Pure TypeScript OBD core isolated from the UI, featuring half-duplex command queuing, BLE 20-byte MTU ring-buffering, multi-vendor GATT profile matching, ISO-TP multi-frame reassembly, and robust tolerance for clone quirks.
+4. **Hardened Protocol Engine:** Pure Dart OBD core (no Flutter imports) isolated from the UI, featuring half-duplex command queuing, BLE 20-byte MTU ring-buffering, multi-vendor GATT profile matching, ISO-TP multi-frame reassembly, and robust tolerance for clone quirks.
 
 ---
 
@@ -26,7 +26,7 @@
 | :--- | :--- | :--- | :--- |
 | **Bluetooth Low Energy (BLE 4.0/5.x)** | Supported | Supported | Primary cross-platform transport. Auto-matches GATT UUIDs; handles 20-byte MTU fragmentation. |
 | **Wi-Fi ELM327 (TCP Socket)** | Supported | Supported | Configurable IP/port (default `192.168.0.10:35000`). Handles cellular drop / "No Internet" routing. |
-| **Bluetooth Classic (RFCOMM)** | **Not Supported** | Supported | Android-only fallback via `react-native-bluetooth-classic`. Apple restricts Classic SPP to MFi hardware. |
+| **Bluetooth Classic (RFCOMM)** | **Not Supported** | Supported | Android-only fallback via a thin Kotlin platform channel (`BluetoothSocket` SPP). Apple restricts Classic SPP to MFi hardware. |
 | **Dual-Mode Adapters** (e.g. Vgate iCar Pro BLE) | Supported (via BLE) | Supported | Automatically directs iOS to BLE; permits BLE or Classic on Android. |
 
 > [!IMPORTANT]
@@ -43,7 +43,7 @@
 │ • Continuous Scan Archiving & Side-by-Side Diagnostic Diff / Compare   │
 │ • Transports: BLE (iOS/Android), Wi-Fi TCP, Android Classic Bluetooth │
 │ • 5-Tab Native Navigation: Home, Live, Codes, Logs, Settings           │
-│ • 60fps Skia Live Dashboard with Reanimated SharedValue pipeline       │
+│ • 60fps Impeller Live Dashboard (CustomPainter + ValueNotifier feed)   │
 │ • Ask AI OS Share Sheet Handoff (Zero API keys, privacy toggles)       │
 │ • High-Frequency Battery Cranking Voltage Drop Test (ATRV at ~20 Hz)   │
 │ • Offline Bundled DTC Dictionary (SAE J2012 + clean plain-text prose)  │
@@ -80,8 +80,8 @@ iCAR resolves seven critical hardware and protocol failure points identified acr
 │ 3. Wi-Fi "No Internet" Cell Drop   │ Pre-cache VIN data + prompt copy   │
 │                                    │ banner before AI share sheet       │
 ├────────────────────────────────────┼────────────────────────────────────┤
-│ 4. 15 Hz React Render Thrashing    │ Bypass React state: LiveDataService│
-│                                    │ → Reanimated SharedValue → Skia    │
+│ 4. 15 Hz Widget Rebuild Thrashing  │ Bypass widget rebuilds: LiveData-  │
+│                                    │ Service → ValueNotifier → Painter  │
 ├────────────────────────────────────┼────────────────────────────────────┤
 │ 5. ISO-TP Multi-ECU Collision      │ ATH1 (Headers ON) during init/DTCs │
 │                                    │ to isolate 7E8 Engine vs 7E9 Trans │
@@ -97,16 +97,24 @@ iCAR resolves seven critical hardware and protocol failure points identified acr
 ### 3.1 BLE GATT Auto-Discovery Profile Table
 Unlike serial ports, BLE OBD adapters lack a universal service UUID. The `BleTransport` evaluates known profiles first before falling back to characteristic heuristic scanning:
 
-```ts
-export interface BleGattProfile {
-  name: string;
-  serviceUuid: string;
-  writeUuid: string;
-  notifyUuid: string;
-  preferWriteWithoutResponse: boolean;
+```dart
+class BleGattProfile {
+  final String name;
+  final String serviceUuid;
+  final String writeUuid;
+  final String notifyUuid;
+  final bool preferWriteWithoutResponse;
+  const BleGattProfile({
+    required this.name,
+    required this.serviceUuid,
+    required this.writeUuid,
+    required this.notifyUuid,
+    required this.preferWriteWithoutResponse,
+  });
 }
 
-export const KNOWN_BLE_PROFILES: BleGattProfile[] = [
+// Illustrative; entries follow the same fields (name, UUIDs, flag)
+const knownBleProfiles = <BleGattProfile>[
   {
     name: 'Vgate iCar Pro / IOS-Vlink',
     serviceUuid: '000018f0-0000-1000-8000-00805f9b34fb',
@@ -144,12 +152,12 @@ export const KNOWN_BLE_PROFILES: BleGattProfile[] = [
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        Presentation Layer (React Native)               │
+│                        Presentation Layer (Flutter)                    │
 │      HomeTab · LiveDashboard · CodesTab · LogsTab · SettingsTab        │
-│          Gauges & Line Charts (@shopify/react-native-skia)             │
+│          Gauges & Line Charts (CustomPainter on Impeller)              │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ UI Thread Reanimated SharedValues
-                                    │ (Zero React re-renders)
+                                    │ ValueNotifier / Listenable repaints
+                                    │ (Zero widget rebuilds)
 ┌───────────────────────────────────▼────────────────────────────────────┐
 │                         Application Services                           │
 │   ConnectionService · LiveDataService · DtcService · ScanService       │
@@ -157,7 +165,7 @@ export const KNOWN_BLE_PROFILES: BleGattProfile[] = [
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │ Typed Commands & Observation Events
 ┌───────────────────────────────────▼────────────────────────────────────┐
-│                       Pure TypeScript OBD Core                         │
+│                       Pure Dart OBD Core                               │
 │  CommandQueue (Half-Duplex Mutex) · Elm327Parser · IsoTpReassembler    │
 │    PollScheduler (Priority Tiers) · PidRegistry · DtcDecoder           │
 └───────────────────────────────────┬────────────────────────────────────┘
@@ -171,40 +179,41 @@ export const KNOWN_BLE_PROFILES: BleGattProfile[] = [
 ### 4.1 Strict Transport Contract
 All hardware abstraction adheres to a unified interface:
 
-```ts
-export type TransportKind = 'ble' | 'wifi' | 'classic' | 'mock';
+```dart
+enum TransportKind { ble, wifi, classic, mock }
 
-export interface AdapterTarget {
-  id: string;
-  name: string;
-  address?: string; // MAC or IP
-  port?: number;    // TCP port (default 35000)
+class AdapterTarget {
+  final String id;
+  final String name;
+  final String? address; // MAC or IP
+  final int? port;       // TCP port (default 35000)
+  const AdapterTarget({required this.id, required this.name, this.address, this.port});
 }
 
-export interface Transport {
-  readonly kind: TransportKind;
-  connect(target: AdapterTarget): Promise<void>;
-  disconnect(): Promise<void>;
-  write(data: string): Promise<void>; // Must append '\r'
-  onData(listener: (chunk: string) => void): () => void;
-  onClose(listener: (reason?: string) => void): () => void;
-  isConnected(): boolean;
+abstract interface class Transport {
+  TransportKind get kind;
+  Future<void> connect(AdapterTarget target);
+  Future<void> disconnect();
+  Future<void> write(String data);   // Must append '\r'
+  Stream<String> get onData;         // ASCII chunks
+  Stream<String?> get onClose;       // close reason
+  bool get isConnected;
 }
 ```
 
 ### 4.2 Half-Duplex ELM327 CommandQueue & Framing
 ELM327 microcontrollers are strictly half-duplex. Issuing a command before receiving the `>` prompt corrupts internal adapter registers.
 
-```ts
-export type CommandPriority = 'IMMEDIATE' | 'USER_ACTION' | 'POLL_FAST' | 'POLL_SLOW';
+```dart
+enum CommandPriority { immediate, userAction, pollFast, pollSlow }
 
-export interface QueuedCommand {
-  id: string;
-  rawCommand: string;
-  priority: CommandPriority;
-  timeoutMs: number;
-  resolve: (lines: string[]) => void;
-  reject: (error: ObdError) => void;
+class QueuedCommand {
+  final String id;
+  final String rawCommand;
+  final CommandPriority priority;
+  final Duration timeout;
+  final Completer<List<String>> completer; // completeError(ObdError)
+  QueuedCommand(this.id, this.rawCommand, this.priority, this.timeout, this.completer);
 }
 ```
 
@@ -243,7 +252,7 @@ The cabin environment demands zero distraction, instantaneous peripheral recogni
 
 ## 6. Detailed Screen Specifications & Wireframes
 
-### 6.1 Home Screen (`app/(tabs)/home.tsx`)
+### 6.1 Home Screen (`lib/ui/home/home_screen.dart`)
 The anchor of the application. Calm, unhurried, and oriented around one primary action.
 
 ```
@@ -279,16 +288,16 @@ The anchor of the application. Calm, unhurried, and oriented around one primary 
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Live Dashboard (`app/(tabs)/live.tsx`)
+### 6.2 Live Dashboard (`lib/ui/live/live_screen.dart`)
 - Swipeable pages with customizable tile layouts (persisted per vehicle in SQLite).
-- Screen keep-awake enabled automatically via `expo-keep-awake`.
+- Screen keep-awake enabled automatically via `wakelock_plus`.
 - Polling scheduler automatically suspends when tab is blurred or app is backgrounded.
 - Tile Types:
   - **1x1 Compact Digital Readout:** Parameter Name + Huge Tabular Value + Metric/Imperial Unit + Min/Max Session Peak.
-  - **2x2 Circular Skia Sweep Gauge:** 240° sweep arc, color zones (Green/Amber/Red), peak-hold tick.
-  - **6-Col Full-Width Bezier Graph:** Rolling 30-second Skia canvas rendering dual overlaid PIDs (e.g. Boost vs. RPM).
+  - **2x2 Circular Sweep Gauge (CustomPainter):** 240° sweep arc, color zones (Green/Amber/Red), peak-hold tick.
+  - **6-Col Full-Width Bezier Graph:** Rolling 30-second CustomPainter canvas rendering dual overlaid PIDs (e.g. Boost vs. RPM).
 
-### 6.3 Diagnostic Codes Screen (`app/(tabs)/codes.tsx`)
+### 6.3 Diagnostic Codes Screen (`lib/ui/codes/codes_screen.dart`)
 - Segmented Control: `Stored (Mode 03)` | `Pending (Mode 07)` | `Permanent (Mode 0A)`.
 - **DTC Row Card:** Alphanumeric Badge (`P0301`) + Component Title ("Cylinder 1 Misfire Detected") + Severity Chip.
 - Detail View (Bottom Sheet): SAE official description, Freeze Frame snapshot, and direct **Ask AI** button.
@@ -299,7 +308,7 @@ The anchor of the application. Calm, unhurried, and oriented around one primary 
   4. Issues Mode 04 (`04\r`).
   5. Automatically executes a post-clear verification re-read.
 
-### 6.4 Ask AI Sheet (`app/sheets/ask-ai.tsx`)
+### 6.4 Ask AI Sheet (`lib/ui/sheets/ask_ai_sheet.dart`)
 A native modal sheet that constructs a rich, privacy-controlled prompt and dispatches it via the OS share sheet.
 
 ```
@@ -334,7 +343,7 @@ A native modal sheet that constructs a rich, privacy-controlled prompt and dispa
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 6.5 Scan History & Comparison Screen (`app/screens/compare-scans.tsx`)
+### 6.5 Scan History & Comparison Screen (`lib/ui/compare/compare_scans_screen.dart`)
 A dedicated multi-scan inspection and diff tool accessible from the Logs tab or after completing a Quick Scan ("Compare with Previous").
 
 ```
@@ -405,7 +414,7 @@ A dedicated multi-scan inspection and diff tool accessible from the Logs tab or 
 ### 7.4 Logging, Storage & Export
 - **FR-15 (Batched Crash-Safe Recording):** Live session telemetry buffers in memory and executes a batched SQLite transaction commit every 2.0 seconds, plus immediately upon app backgrounding, navigation away, or disconnect.
 - **FR-16 (Session Scrubbable Replay):** Graphically scrub through recorded drive sessions on the Live Dashboard using a timeline slider.
-- **FR-17 (PDF Diagnostic Reports):** Generate vector PDF inspection summaries via `expo-print` containing vehicle profile, timestamp with IANA timezone, full DTC register, freeze-frame metrics, and professional mechanic disclaimer.
+- **FR-17 (PDF Diagnostic Reports):** Generate vector PDF inspection summaries via the `pdf` + `printing` packages containing vehicle profile, timestamp with IANA timezone, full DTC register, freeze-frame metrics, and professional mechanic disclaimer.
 - **FR-18 (CSV Telemetry Export):** Export raw timestamped sample rows (`t_offset_ms, pid_name, value, unit`) via standard RFC 4180 CSV for external analysis.
 
 ### 7.5 Ask AI System Integration
@@ -436,7 +445,7 @@ A dedicated multi-scan inspection and diff tool accessible from the Logs tab or 
 
 ## 8. Database Architecture & SQLite Schema
 
-iCAR utilizes `expo-sqlite` with Write-Ahead Logging (`WAL`) enabled to ensure high-frequency writes never block UI read queries.
+iCAR utilizes `drift` (`sqlite3` FFI) with Write-Ahead Logging (`WAL`) enabled to ensure high-frequency writes never block UI read queries.
 
 ```sql
 PRAGMA journal_mode = WAL;
@@ -523,14 +532,14 @@ To avoid copyright infringement and GPL licensing restrictions (which conflict w
 ## 9. Phased Implementation Roadmap
 
 ```
-Phase 0: Architecture Setup & Pure TS Core Simulator (Days 1–5)
-├── Scaffold strict TypeScript repo, ESLint, Jest, and directory structure
-├── Build pure TS CommandQueue, Elm327Parser, IsoTpReassembler, DtcDecoder
+Phase 0: Architecture Setup & Pure Dart Core Simulator (Days 1–5)
+├── Scaffold Flutter repo (strict analysis_options, very_good_analysis lints, flutter_test)
+├── Build pure Dart CommandQueue, Elm327Parser, IsoTpReassembler, DtcDecoder
 ├── Build SmartMockTransport simulating normal, split-chunk, and dirty clone responses
 └── 100% Unit test coverage on PID formulas and framing
 
 Phase 1: App Shell, Navigation & Quick Scan Vertical Slice (Days 6–10)
-├── Expo Prebuild config with dev client on iOS and Android
+├── Flutter iOS/Android project config, flavors, and permissions manifests
 ├── 5-tab native layout with SF Symbols and OLED black tokens
 ├── Quick Scan state machine wired to SmartMockTransport
 ├── SQLite WAL database initialization and bundled DTC database loader
@@ -543,15 +552,15 @@ Phase 2: Real Hardware Transports & In-App Terminal (Days 11–16)
 ├── In-app circular Flight Recorder / raw terminal screen
 └── Driveway validation on physical test vehicle
 
-Phase 3: 60fps Skia Live Dashboard & Logging Engine (Days 17–22)
-├── Reanimated SharedValue live data bridge
-├── Skia 240° sweep gauges, numeric tiles, and rolling line graphs
+Phase 3: 60fps Impeller Live Dashboard & Logging Engine (Days 17–22)
+├── ValueNotifier live data bridge (isolate-fed)
+├── CustomPainter 240° sweep gauges, numeric tiles, and rolling line graphs
 ├── 2.0s Batched SQLite LogService recording pipeline
 └── Scrubbable session replay and CSV export
 
 Phase 4: Comparison Engine, Reports & Battery Diagnostics (Days 23–28)
 ├── Continuous Scan Archiving with live sensor baseline capture
-├── Diagnostic Diff Engine & Compare Scans screen (app/screens/compare-scans.tsx)
+├── Diagnostic Diff Engine & Compare Scans screen (lib/ui/compare/compare_scans_screen.dart)
 ├── Comparative Ask AI prompt builder & Before/After PDF inspection report
 ├── High-rate battery cranking voltage drop test
 ├── Vehicle profile confirmation & garage multi-car switcher
@@ -559,7 +568,7 @@ Phase 4: Comparison Engine, Reports & Battery Diagnostics (Days 23–28)
 
 Phase 5: Store Readiness, Polish & Beta Release (Days 29–35)
 ├── Platform permissions hardening (Bluetooth scan/connect, local network)
-├── Comprehensive UI/E2E test flows (Maestro / Detox)
+├── Comprehensive UI/E2E test flows (integration_test / Maestro)
 ├── Internal Android testing track & TestFlight distribution
 └── Final store metadata, privacy policy, and commercial packaging
 ```
@@ -570,8 +579,8 @@ Phase 5: Store Readiness, Polish & Beta Release (Days 29–35)
 
 A build milestone is deemed complete only when it meets the following objective verification gates:
 
-1. **Protocol Integrity:** The pure TypeScript core handles split 20-byte BLE packets, command echoes, multi-frame ISO-TP lines, and dirty error responses (`NO DATA`, `CAN ERROR`, `?`) without hanging the `CommandQueue` or throwing unhandled rejections.
-2. **60 FPS Live Rendering:** The Live Dashboard maintains a sustained 60 fps (120 fps on ProMotion displays) during 15 Hz PID updates, with zero React component tree re-renders measured via React DevTools profiler.
+1. **Protocol Integrity:** The pure Dart core handles split 20-byte BLE packets, command echoes, multi-frame ISO-TP lines, and dirty error responses (`NO DATA`, `CAN ERROR`, `?`) without hanging the `CommandQueue` or throwing unhandled rejections.
+2. **60 FPS Live Rendering:** The Live Dashboard maintains a sustained 60 fps (120 fps on ProMotion displays) during 15 Hz PID updates, with zero live-gauge widget rebuilds measured via Flutter DevTools (rebuild counts + performance overlay).
 3. **Snapshot Truthfulness:** Every recorded diagnostic scan snapshot stores immutable timestamps, UTC timezone, vehicle VIN, active DTCs, freeze frame, and readiness status.
 4. **Data Safety:** Destructive actions (Clearing DTCs) cannot be triggered in fewer than two explicit taps, always record a pre-clear snapshot, and immediately verify the result via an automated re-scan.
 5. **Privacy Enforcement:** Ask AI prompts strictly exclude the vehicle VIN by default and never transmit payload data across background network connections; all transfers proceed through user interaction with the native OS share sheet.
