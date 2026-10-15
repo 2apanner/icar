@@ -36,6 +36,13 @@ def build_project():
     compile_entries = []
     group_children = []
 
+    # Assets.xcassets
+    assets_ref_id = generate_id("FileRef_Assets_xcassets")
+    assets_build_id = generate_id("BuildFile_Assets_xcassets")
+    file_refs.append(f'\t\t{assets_ref_id} /* Assets.xcassets */ = {{isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; }};')
+    build_files.append(f'\t\t{assets_build_id} /* Assets.xcassets in Resources */ = {{isa = PBXBuildFile; fileRef = {assets_ref_id} /* Assets.xcassets */; }};')
+    group_children.append(f'\t\t\t\t{assets_ref_id} /* Assets.xcassets */,')
+
     for f_name, rel_path in swift_files:
         file_ref_id = generate_id(f"FileRef_{rel_path}")
         build_file_id = generate_id(f"BuildFile_{rel_path}")
@@ -154,6 +161,7 @@ def build_project():
 \t\t\tisa = PBXResourcesBuildPhase;
 \t\t\tbuildActionMask = 2147483647;
 \t\t\tfiles = (
+\t\t\t\t{assets_build_id} /* Assets.xcassets in Resources */,
 \t\t\t);
 \t\t\trunOnlyForDeploymentPostprocessing = 0;
 \t\t}};

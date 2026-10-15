@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B2508B1AB425B71B1686D73 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 27B3FBF67C2455DFB45A5EAE /* Assets.xcassets */; };
 		7A35E45DEB32508BABD66DE0 /* FlightRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */; };
 		B82A77A88D2B5AA289395ABA /* BMWCodingStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */; };
 		D0A41A44904150D1A22426D2 /* OBDManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2EF85E8345058ABBF0284ED /* OBDManager.swift */; };
@@ -29,6 +30,7 @@
 
 /* Begin PBXFileReference section */
 		731878F0DE685BA9B8B767A0 /* iCAR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iCAR.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		27B3FBF67C2455DFB45A5EAE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FlightRecorderView.swift"; sourceTree = "<group>"; };
 		D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BMWCodingStudioView.swift"; sourceTree = "<group>"; };
 		D2EF85E8345058ABBF0284ED /* OBDManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OBDManager.swift"; sourceTree = "<group>"; };
@@ -71,6 +73,7 @@
 		C8434C67354F5A1B9ECB1C04 /* iCAR */ = {
 			isa = PBXGroup;
 			children = (
+				27B3FBF67C2455DFB45A5EAE /* Assets.xcassets */,
 				BD1493BAB84B59CD9875423E /* FlightRecorderView.swift */,
 				D2B82FF6DA6158B5902E8190 /* BMWCodingStudioView.swift */,
 				D2EF85E8345058ABBF0284ED /* OBDManager.swift */,
@@ -158,6 +161,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0B2508B1AB425B71B1686D73 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
