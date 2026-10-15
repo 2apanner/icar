@@ -10,47 +10,85 @@ struct ConnectionView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
-                    // MARK: - Header
-                    VStack(spacing: 16) {
+                    // MARK: - iCAR Home Screen Brand Header
+                    VStack(spacing: 12) {
                         ZStack {
+                            // Subtle ambient glow
                             Circle()
-                                .stroke(Theme.accent.opacity(isPulsing ? 0.08 : 0.3), lineWidth: 1.5)
-                                .frame(width: isPulsing ? 120 : 80, height: isPulsing ? 120 : 80)
-                                .scaleEffect(isPulsing ? 1.15 : 0.95)
+                                .fill(Theme.accent.opacity(0.18))
+                                .frame(width: 100, height: 100)
+                                .blur(radius: 20)
                             
-                            Circle()
-                                .fill(Theme.surfaceElevated)
-                                .frame(width: 68, height: 68)
+                            Image("iCARLogo")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 84, height: 84)
+                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                                 .overlay(
-                                    Circle().stroke(Theme.surfaceBorder, lineWidth: 1)
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(Theme.surfaceBorder, lineWidth: 1.5)
                                 )
-                                .shadow(color: Theme.accent.opacity(0.18), radius: 10, x: 0, y: 4)
-                            
-                            Image(systemName: "bolt.car.fill")
-                                .font(.system(size: 26, weight: .semibold))
-                                .foregroundColor(Theme.accent)
+                                .shadow(color: Color.black.opacity(0.4), radius: 10, x: 0, y: 6)
                         }
                         .padding(.top, 24)
-                        .onAppear {
-                            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-                                isPulsing = true
-                            }
-                        }
                         
-                        VStack(spacing: 6) {
-                            Text("Connect Adapter")
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                        VStack(spacing: 4) {
+                            Text("iCAR")
+                                .font(.system(size: 34, weight: .black, design: .rounded))
                                 .foregroundColor(Theme.textPrimary)
+                                .tracking(1.5)
                             
-                            Text("Insert adapter into 16-pin OBD-II port & switch ignition ON.")
-                                .font(.system(size: 13))
+                            Text("Intelligent Connected Automotive Reader")
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(Theme.textSecondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 30)
                         }
                     }
                     
-                    // MARK: - Adapter Kind Segmented Control
+                    // MARK: - Direct Connect Action Hero
+                    Button {
+                        appleHapticImpact()
+                        directConnectAction()
+                    } label: {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white.opacity(0.2))
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Direct Connect")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                Text("Auto-detect OBD-II interface & connect")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color.white.opacity(0.8))
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(Color.white.opacity(0.8))
+                        }
+                        .padding(16)
+                        .background(
+                            LinearGradient(
+                                colors: [Theme.accent, Color(red: 0x14 / 255.0, green: 0x4E / 255.0, blue: 0xA0 / 255.0)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Theme.accent.opacity(0.3), radius: 12, x: 0, y: 6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal, 16)
+                    
+                    // MARK: - Transport Kind Segmented Selector
                     HStack(spacing: 4) {
                         ForEach(TransportKind.allCases) { kind in
                             Button {
@@ -83,66 +121,6 @@ struct ConnectionView: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(Theme.surfaceBorder, lineWidth: 1)
                     )
-                    .padding(.horizontal, 16)
-                    
-                    // MARK: - Direct Connect Demo Card
-                    Button {
-                        appleHapticImpact()
-                        if let demo = obd.discoveredAdapters.first(where: { $0.kind == .demo }) {
-                            obd.connect(to: demo)
-                        }
-                    } label: {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Theme.accent.opacity(0.15))
-                                    .frame(width: 44, height: 44)
-                                Image(systemName: "bolt.car.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(Theme.accent)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 3) {
-                                HStack(spacing: 6) {
-                                    Text("Virtual BMW M3 (G80)")
-                                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                                        .foregroundColor(Theme.textPrimary)
-                                    
-                                    Text("SIMULATOR")
-                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                        .foregroundColor(Theme.accent)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Theme.accentSubtle)
-                                        .clipShape(Capsule())
-                                }
-                                
-                                Text("Real CAN Bus protocol simulation: DME fault memory, live telemetry, CBS reset.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(Theme.textSecondary)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.leading)
-                            }
-                            
-                            Spacer()
-                            
-                            Text("Connect")
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundColor(Color.white)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 7)
-                                .background(Theme.accent)
-                                .clipShape(Capsule())
-                        }
-                        .padding(14)
-                        .background(Theme.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Theme.surfaceBorder, lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(PlainButtonStyle())
                     .padding(.horizontal, 16)
                     
                     // MARK: - Discovered Hardware Adapters Section
@@ -191,7 +169,7 @@ struct ConnectionView: View {
                                                     .lineLimit(1)
                                                 
                                                 if adapter.isRecommended {
-                                                    Text("RECOMMENDED")
+                                                    Text("DEFAULT")
                                                         .font(.system(size: 8, weight: .bold))
                                                         .foregroundColor(Theme.accent)
                                                         .padding(.horizontal, 4)
@@ -263,6 +241,13 @@ struct ConnectionView: View {
                     Spacer(minLength: 30)
                 }
             }
+        }
+    }
+    
+    private func directConnectAction() {
+        // If an adapter is discovered under current transport, connect to it; otherwise connect to recommended or demo
+        if let target = filteredAdapters.first(where: { $0.isRecommended }) ?? filteredAdapters.first ?? obd.discoveredAdapters.first {
+            obd.connect(to: target)
         }
     }
     

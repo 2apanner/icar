@@ -24,6 +24,8 @@
 		2DE1D1DA836B5AB8AC4B2998 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B05402A45525845843BD230 /* Theme.swift */; };
 		BD17FC8E23AA5D9A8EE708E1 /* BMWECUModules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E9C6888E9ED504CA9C21469 /* BMWECUModules.swift */; };
 		2711FCF3F05157EC8D7D2919 /* OBDPIDDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA32E79096554598BCEF407 /* OBDPIDDecoder.swift */; };
+		AAA000012345678901234567 /* DashboardScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB000012345678901234567 /* DashboardScanView.swift */; };
+		AAA000022345678901234567 /* CarProgrammingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB000022345678901234567 /* CarProgrammingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +47,8 @@
 		3B05402A45525845843BD230 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Theme.swift"; sourceTree = "<group>"; };
 		0E9C6888E9ED504CA9C21469 /* BMWECUModules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BMWECUModules.swift"; sourceTree = "<group>"; };
 		6EA32E79096554598BCEF407 /* OBDPIDDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OBDPIDDecoder.swift"; sourceTree = "<group>"; };
+		BBB000012345678901234567 /* DashboardScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DashboardScanView.swift"; sourceTree = "<group>"; };
+		BBB000022345678901234567 /* CarProgrammingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CarProgrammingView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +89,8 @@
 				F283F0BE2D3A56B1AE943A86 /* DiagnosticsView.swift */,
 				3B05402A45525845843BD230 /* Theme.swift */,
 				0E9C6888E9ED504CA9C21469 /* BMWECUModules.swift */,
+				BBB000012345678901234567 /* DashboardScanView.swift */,
+				BBB000022345678901234567 /* CarProgrammingView.swift */,
 				6EA32E79096554598BCEF407 /* OBDPIDDecoder.swift */,
 			);
 			path = iCAR;
@@ -181,6 +187,8 @@
 				3776A948239C5C5A85DDDA7D /* DiagnosticsView.swift in Sources */,
 				2DE1D1DA836B5AB8AC4B2998 /* Theme.swift in Sources */,
 				BD17FC8E23AA5D9A8EE708E1 /* BMWECUModules.swift in Sources */,
+				AAA000012345678901234567 /* DashboardScanView.swift in Sources */,
+				AAA000022345678901234567 /* CarProgrammingView.swift in Sources */,
 				2711FCF3F05157EC8D7D2919 /* OBDPIDDecoder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
