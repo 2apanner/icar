@@ -62,9 +62,7 @@ actor ELM327CommandQueue {
             let normalized = line.replacingOccurrences(of: " ", with: "").uppercased()
             
             // Check for terminal error tokens
-            if normalized == "NODATA" {
-                throw OBDError.noData
-            } else if normalized == "UNABLETOCONNECT" {
+            if normalized == "UNABLETOCONNECT" {
                 throw OBDError.unableToConnect
             } else if normalized == "CANERROR" {
                 throw OBDError.canError

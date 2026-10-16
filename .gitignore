@@ -16,3 +16,9 @@ build/
 # Python
 __pycache__/
 *.py[cod]
+
+# Android
+.gradle/
+**/build/
+*.apk
+local.properties

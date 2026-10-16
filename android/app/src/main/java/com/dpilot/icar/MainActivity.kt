@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        obdManager = OBDManager(lifecycleScope)
+        obdManager = OBDManager(applicationContext, lifecycleScope)
         requestRequiredPermissions()
 
         setContent {

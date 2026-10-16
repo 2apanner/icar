@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -194,23 +196,7 @@ fun ConnectionScreen(obd: OBDManager) {
                 }
             }
 
-            // Bench Simulator Mode
-            item {
-                Box(
-                    modifier = Modifier
-                        .background(AppTheme.SurfaceElevated, shape = RoundedCornerShape(50))
-                        .border(1.dp, AppTheme.SurfaceBorder, RoundedCornerShape(50))
-                        .clickable { obd.connectSimulator() }
-                        .padding(horizontal = 16.dp, vertical = 10.dp)
-                ) {
-                    Text(
-                        text = "Test with Virtual BMW M3 Simulator",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = AppTheme.TextSecondary
-                    )
-                }
-            }
+
         } else {
             // Actively Searching / Discovered State
             item {
@@ -387,6 +373,36 @@ fun ConnectionScreen(obd: OBDManager) {
                     Text(step, fontSize = 12.sp, fontFamily = FontFamily.Monospace, color = AppTheme.TextSecondary)
                     TextButton(onClick = { obd.disconnect() }) {
                         Text("Cancel", fontSize = 12.sp, color = AppTheme.TextMuted)
+                    }
+                }
+            }
+        }
+        // Connection Error Card
+        if (obd.connectionState is ConnectionState.Error) {
+            val errMsg = (obd.connectionState as ConnectionState.Error).message
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AppTheme.SurfaceElevated, RoundedCornerShape(16.dp))
+                        .border(1.dp, AppTheme.Critical.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Error",
+                        tint = AppTheme.Critical,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Text("Connection Failed", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.Critical)
+                    Text(errMsg, fontSize = 12.sp, color = AppTheme.TextSecondary, textAlign = TextAlign.Center)
+                    Button(
+                        onClick = { obd.disconnect(); obd.startBLESearch() },
+                        colors = ButtonDefaults.buttonColors(containerColor = AppTheme.Critical.copy(alpha = 0.2f))
+                    ) {
+                        Text("Dismiss & Search Again", color = AppTheme.Critical, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

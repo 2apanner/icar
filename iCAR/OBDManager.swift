@@ -260,12 +260,16 @@ class OBDManager: ObservableObject {
                     self.log("SYS: ECU supported \(self.supportedPIDs.count) Mode 01 sensor PIDs.", direction: .system)
                 }
                 
+                // Step 7.5: Query Actual Protocol Name (ATDP)
+                let atdpLines = (try? await queue.execute(command: "ATDP")) ?? []
+                let protocolName = atdpLines.first(where: { !$0.isEmpty }) ?? "ISO 15765-4 (CAN 11/500)"
+
                 // Step 8: Read VIN via Mode 09 PID 02
                 await MainActor.run { self.connectionState = .connecting(step: "Reading Vehicle VIN (Mode 09 PID 02)...") }
                 self.log("TX: 0902", direction: .tx)
-                let vinLines = try await queue.execute(command: "0902")
+                let vinLines = (try? await queue.execute(command: "0902")) ?? []
                 let reassembledVin = ISOTPDecoder.reassemble(lines: vinLines)
-                var resolvedVin = "WVWZZZAU1JW123456"
+                var resolvedVin = "Not Reported by ECU"
                 if let vinMsg = reassembledVin.first, let decodedVin = OBDPIDDecoder.decodeVIN(payload: vinMsg.payload) {
                     resolvedVin = decodedVin
                     self.log("SYS: Read VIN: \(decodedVin)", direction: .system)
@@ -276,9 +280,9 @@ class OBDManager: ObservableObject {
                     vin: resolvedVin,
                     year: metadata.year,
                     make: metadata.make,
-                    model: "Connected Vehicle",
+                    model: resolvedVin != "Not Reported by ECU" ? "Connected Vehicle" : "OBD-II Compliant",
                     engine: "OBD-II Compliant",
-                    protocolName: "ISO 15765-4 (CAN 11/500)",
+                    protocolName: protocolName,
                     restingVoltage: batteryV
                 )
                 
@@ -731,9 +735,9 @@ class OBDManager: ObservableObject {
             vinStr = profile.vin
             protocolStr = profile.protocolName
         } else {
-            profileStr = "2022 BMW M3 Competition (G80) · 3.0L S58"
-            vinStr = "WBA33AY08MFA98765"
-            protocolStr = "ISO 15765-4 (CAN 11/500)"
+            profileStr = "Diagnostic Scan Report"
+            vinStr = "Vehicle Not Connected"
+            protocolStr = "Standard OBD-II"
         }
         
         let formatter = DateFormatter()

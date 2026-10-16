@@ -66,6 +66,13 @@ class RealBLETransport: NSObject, TransportProtocol, CBCentralManagerDelegate, C
         return try await withCheckedThrowingContinuation { continuation in
             self.connectContinuation = continuation
             self.centralManager.connect(p, options: nil)
+            
+            // Safety connection timeout: 8 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) { [weak self] in
+                guard let self = self, let cont = self.connectContinuation else { return }
+                self.connectContinuation = nil
+                cont.resume(throwing: OBDError.unableToConnect)
+            }
         }
     }
     

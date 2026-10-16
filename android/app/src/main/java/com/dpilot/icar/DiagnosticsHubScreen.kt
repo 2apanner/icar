@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -122,6 +123,9 @@ private fun TabItem(title: String, icon: ImageVector, isSelected: Boolean, onCli
 
 @Composable
 private fun ErrorsTab(obd: OBDManager, profile: VehicleProfile, onShare: () -> Unit) {
+    val totalFaults = obd.storedDTCs.size + obd.permanentDTCs.size + obd.pendingDTCs.size
+    val allCodes = obd.permanentDTCs + obd.storedDTCs + obd.pendingDTCs
+
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             // Summary Banner
@@ -135,7 +139,12 @@ private fun ErrorsTab(obd: OBDManager, profile: VehicleProfile, onShare: () -> U
             ) {
                 Column {
                     Text("ECU FAULT DIAGNOSTICS", fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = AppTheme.TextMuted)
-                    Text("${obd.storedDTCs.size + obd.permanentDTCs.size} Total Faults Detected", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AppTheme.Critical)
+                    Text(
+                        text = if (totalFaults == 0) "0 Faults Detected · All Systems Clear" else "$totalFaults Faults Detected",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (totalFaults == 0) AppTheme.Nominal else AppTheme.Critical
+                    )
                 }
 
                 Button(
@@ -150,7 +159,35 @@ private fun ErrorsTab(obd: OBDManager, profile: VehicleProfile, onShare: () -> U
             }
         }
 
-        val allCodes = obd.permanentDTCs + obd.storedDTCs + obd.pendingDTCs
+        if (allCodes.isEmpty()) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AppTheme.Surface, RoundedCornerShape(16.dp))
+                        .border(1.dp, AppTheme.Nominal.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                        .padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(AppTheme.Nominal.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Pass",
+                            tint = AppTheme.Nominal,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    Text("No Diagnostic Trouble Codes Found", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AppTheme.TextPrimary)
+                    Text("ECU memory contains zero stored, pending, or permanent fault codes. Powertrain and emissions systems are operating normally.", fontSize = 12.sp, color = AppTheme.TextSecondary, textAlign = TextAlign.Center)
+                }
+            }
+        }
         items(allCodes) { dtc ->
             Column(
                 modifier = Modifier
