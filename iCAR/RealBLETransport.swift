@@ -117,7 +117,10 @@ class RealBLETransport: NSObject, TransportProtocol, CBCentralManagerDelegate, C
     }
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        let name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? "OBD Adapter"
+        guard let name = peripheral.name ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String),
+              !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
         onDiscoveredPeripheral?(peripheral, RSSI.intValue, name)
     }
     

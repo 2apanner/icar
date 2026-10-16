@@ -226,7 +226,7 @@ struct ConnectionView: View {
                             // Discovered Devices List
                             if !obd.discoveredAdapters.isEmpty {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text("SELECT YOUR ADAPTER")
+                                    Text("DISCOVERED BLUETOOTH DEVICES")
                                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                                         .foregroundColor(Theme.textMuted)
                                         .padding(.horizontal, 4)
@@ -243,30 +243,18 @@ struct ConnectionView: View {
                                                             .fill(Theme.accent.opacity(0.15))
                                                             .frame(width: 44, height: 44)
                                                         
-                                                        Image(systemName: adapter.kind.iconName)
-                                                            .font(.system(size: 18))
+                                                        Image(systemName: "wave.3.forward.circle.fill")
+                                                            .font(.system(size: 20))
                                                             .foregroundColor(Theme.accent)
                                                     }
                                                     
                                                     VStack(alignment: .leading, spacing: 2) {
-                                                        HStack(spacing: 6) {
-                                                            Text(adapter.name)
-                                                                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                                                .foregroundColor(Theme.textPrimary)
-                                                            
-                                                            if adapter.isRecommended {
-                                                                Text("COMPATIBLE")
-                                                                    .font(.system(size: 8, weight: .bold))
-                                                                    .foregroundColor(Theme.nominal)
-                                                                    .padding(.horizontal, 5)
-                                                                    .padding(.vertical, 1)
-                                                                    .background(Theme.nominal.opacity(0.15))
-                                                                    .cornerRadius(4)
-                                                            }
-                                                        }
+                                                        Text(adapter.name)
+                                                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                                                            .foregroundColor(Theme.textPrimary)
                                                         
-                                                        Text(adapter.detail)
-                                                            .font(.system(size: 11))
+                                                        Text("Signal: \(adapter.rssi) dBm")
+                                                            .font(.system(size: 11, design: .monospaced))
                                                             .foregroundColor(Theme.textSecondary)
                                                     }
                                                     
@@ -291,7 +279,7 @@ struct ConnectionView: View {
                                                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                                 .overlay(
                                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                        .stroke(adapter.isRecommended ? Theme.accent.opacity(0.5) : Theme.surfaceBorder, lineWidth: 1)
+                                                        .stroke(Theme.accent.opacity(0.4), lineWidth: 1)
                                                 )
                                             }
                                             .buttonStyle(PlainButtonStyle())
@@ -299,6 +287,20 @@ struct ConnectionView: View {
                                     }
                                 }
                                 .padding(.horizontal, 16)
+                            } else if obd.isSearching {
+                                VStack(spacing: 8) {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: Theme.accent))
+                                        .scaleEffect(0.9)
+                                    Text("Listening for nearby Bluetooth devices...")
+                                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                                        .foregroundColor(Theme.textSecondary)
+                                    Text("Make sure your Bluetooth adapter is plugged into the car and turned on.")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Theme.textMuted)
+                                        .multilineTextAlignment(.center)
+                                }
+                                .padding(20)
                             }
                         }
                     }
