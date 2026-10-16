@@ -27,6 +27,7 @@ class OBDManager: ObservableObject {
     @Published var connectionState: ConnectionState = .disconnected
     @Published var selectedTransport: TransportKind = .bluetooth
     @Published var discoveredAdapters: [DiscoveredAdapter] = []
+    @Published var isSearching: Bool = false
     
     // Diagnostic State
     @Published var hasCompletedScan = false
@@ -96,7 +97,18 @@ class OBDManager: ObservableObject {
     
     init() {
         setupBLEDiscoveryListener()
-        populateDefaultAdapters()
+        // No static clutter adapters by default.
+        // If UI test arguments requested demo, auto-connect simulator
+        if ProcessInfo.processInfo.arguments.contains("-autoConnectDemo") || ProcessInfo.processInfo.arguments.contains("-autoScanDemo") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.connectSimulator()
+                if ProcessInfo.processInfo.arguments.contains("-autoScanDemo") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                        self?.runQuickScan()
+                    }
+                }
+            }
+        }
     }
     
     private func setupBLEDiscoveryListener() {
@@ -115,11 +127,15 @@ class OBDManager: ObservableObject {
                 kind: .bluetooth,
                 detail: "BLE RSSI: \(rssi) dBm",
                 rssi: rssi,
-                isRecommended: isKnown || name.lowercased().contains("icar") || name.lowercased().contains("obd")
+                isRecommended: isKnown || name.lowercased().contains("icar") || name.lowercased().contains("obd") || name.lowercased().contains("vlink")
             )
             
-            if !self.discoveredAdapters.contains(where: { $0.id == id }) {
-                self.discoveredAdapters.append(newAdapter)
+            DispatchQueue.main.async {
+                if let index = self.discoveredAdapters.firstIndex(where: { $0.id == id }) {
+                    self.discoveredAdapters[index] = newAdapter
+                } else {
+                    self.discoveredAdapters.append(newAdapter)
+                }
             }
         }
         
@@ -130,34 +146,33 @@ class OBDManager: ObservableObject {
         wifiTransport.onRawChunkReceived = { [weak self] chunk in
             self?.log("RX: \(chunk.trimmingCharacters(in: .whitespacesAndNewlines))", direction: .rx)
         }
-        
-        if ProcessInfo.processInfo.arguments.contains("-autoConnectDemo") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                if let demo = self?.discoveredAdapters.first(where: { $0.kind == .demo }) {
-                    self?.connect(to: demo)
-                }
-            }
-        }
-        
-        if ProcessInfo.processInfo.arguments.contains("-autoScanDemo") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                if let demo = self?.discoveredAdapters.first(where: { $0.kind == .demo }) {
-                    self?.connect(to: demo)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                        self?.runQuickScan()
-                    }
-                }
-            }
-        }
     }
     
-    func populateDefaultAdapters() {
-        discoveredAdapters = [
-            DiscoveredAdapter(id: "vgate_ble_default", name: "Vgate iCar Pro BLE", kind: .bluetooth, detail: "GATT 000018f0 · Low Energy", rssi: -54, isRecommended: true),
-            DiscoveredAdapter(id: "veepeak_ble_default", name: "Veepeak OBDCheck BLE", kind: .bluetooth, detail: "GATT 0000ffe0 · 500 kbps", rssi: -68, isRecommended: false),
-            DiscoveredAdapter(id: "wifi_gateway_default", name: "Wi-Fi ELM327 Gateway", kind: .wifi, detail: "192.168.0.10:35000 · TCP", rssi: -42, isRecommended: false),
-            DiscoveredAdapter(id: "demo_simulator", name: "Virtual BMW M3 G80 (CAN Simulator)", kind: .demo, detail: "UDS & OBD-II ECU Simulation", rssi: -20, isRecommended: true)
-        ]
+    // MARK: - On-Demand Bluetooth Discovery
+    func startBLESearch() {
+        isSearching = true
+        discoveredAdapters.removeAll()
+        bleTransport.startScan()
+        log("BLE: Started scanning for Bluetooth OBD-II devices...", direction: .system)
+    }
+    
+    func stopBLESearch() {
+        isSearching = false
+        bleTransport.stopScan()
+        log("BLE: Stopped scanning for devices", direction: .system)
+    }
+    
+    func connectSimulator() {
+        stopBLESearch()
+        let demo = DiscoveredAdapter(
+            id: "demo_simulator",
+            name: "Virtual BMW M3 G80 (CAN Simulator)",
+            kind: .demo,
+            detail: "UDS & OBD-II ECU Simulation",
+            rssi: -20,
+            isRecommended: true
+        )
+        connect(to: demo)
     }
     
     func log(_ message: String, direction: FlightLogEntry.Direction) {
@@ -170,6 +185,7 @@ class OBDManager: ObservableObject {
     
     // MARK: - Real Automotive Connection & Handshake Sequence
     func connect(to adapter: DiscoveredAdapter) {
+        stopBLESearch()
         connectionState = .connecting(step: "Initializing adapter transport...")
         log("INIT: Selected adapter \(adapter.name) (\(adapter.kind.rawValue))", direction: .system)
         
@@ -551,6 +567,7 @@ class OBDManager: ObservableObject {
                 self.scanProgress = 1.0
                 self.isScanning = false
                 self.scanStatusText = "Scan Complete: \(self.storedDTCs.count) Stored · \(self.pendingDTCs.count) Pending · \(self.permanentDTCs.count) Permanent"
+                self.uploadScanReportToSupabase()
             }
             
         } catch {
@@ -589,6 +606,38 @@ class OBDManager: ObservableObject {
             self.scanProgress = 1.0
             self.isScanning = false
             self.scanStatusText = "Scan Complete: \(self.permanentDTCs.count) Permanent · \(self.storedDTCs.count) Stored · \(self.pendingDTCs.count) Pending"
+            self.uploadScanReportToSupabase()
+        }
+    }
+    
+    // MARK: - Supabase Cloud Synchronization
+    func uploadScanReportToSupabase() {
+        guard case .connected(let profile) = connectionState else { return }
+        let reportText = generateDiagnosticReportText()
+        let dtcsStored = storedDTCs
+        let dtcsPending = pendingDTCs
+        let dtcsPerm = permanentDTCs
+        let rPassed = readinessPassed
+        let rTotal = readinessTotal
+        let bVolt = liveTelemetry.batteryVoltage > 0 ? liveTelemetry.batteryVoltage : profile.restingVoltage
+        let bSOC = liveTelemetry.batterySOC
+        let bType = registeredBatteryType
+        let cbs = serviceItems
+        
+        Task {
+            _ = await SupabaseManager.shared.uploadScanReport(
+                profile: profile,
+                storedDTCs: dtcsStored,
+                pendingDTCs: dtcsPending,
+                permanentDTCs: dtcsPerm,
+                readinessPassed: rPassed,
+                readinessTotal: rTotal,
+                batteryVoltage: bVolt,
+                batterySOC: bSOC,
+                batteryType: bType,
+                cbsItems: cbs,
+                reportText: reportText
+            )
         }
     }
     

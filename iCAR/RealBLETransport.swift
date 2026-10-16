@@ -31,6 +31,8 @@ class RealBLETransport: NSObject, TransportProtocol, CBCentralManagerDelegate, C
          CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"))
     ]
     
+    private var isScanningRequested = false
+    
     var onDiscoveredPeripheral: ((CBPeripheral, Int, String) -> Void)?
     var onRawChunkReceived: ((String) -> Void)?
     
@@ -40,11 +42,13 @@ class RealBLETransport: NSObject, TransportProtocol, CBCentralManagerDelegate, C
     }
     
     func startScan() {
+        isScanningRequested = true
         guard centralManager.state == .poweredOn else { return }
         centralManager.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
     }
     
     func stopScan() {
+        isScanningRequested = false
         centralManager.stopScan()
     }
     
@@ -107,7 +111,7 @@ class RealBLETransport: NSObject, TransportProtocol, CBCentralManagerDelegate, C
     // MARK: - CBCentralManagerDelegate
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         isCentralReady = central.state == .poweredOn
-        if isCentralReady {
+        if isCentralReady && isScanningRequested {
             startScan()
         }
     }

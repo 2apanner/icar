@@ -5,6 +5,9 @@ struct RootView: View {
     @State private var showingFunctionHub: Bool = {
         return ProcessInfo.processInfo.arguments.contains("-showFunctions")
     }()
+    @State private var isVehicleConfirmed: Bool = {
+        return ProcessInfo.processInfo.arguments.contains("-autoScanDemo") || ProcessInfo.processInfo.arguments.contains("-showFunctions")
+    }()
     @State private var selectedTab: Int = {
         if ProcessInfo.processInfo.arguments.contains("-tabSensors") { return 1 }
         if ProcessInfo.processInfo.arguments.contains("-tabBattery") { return 2 }
@@ -19,12 +22,54 @@ struct RootView: View {
             
             switch obd.connectionState {
             case .disconnected, .scanning, .connecting, .error:
-                // SCREEN 1: HOME SCREEN (iCAR Logo + Name + Direct Connect)
+                // SCREEN 1: HOME SCREEN (iCAR Logo + Search & Connect OBD-II)
                 ConnectionView(obd: obd)
+                    .onAppear {
+                        isVehicleConfirmed = false
+                    }
                 
             case .connected(let profile):
-                if !obd.hasCompletedScan && !showingFunctionHub {
-                    // SCREEN 2: VEHICLE DASHBOARD (Pre-scan state with SCAN CAR action)
+                if !isVehicleConfirmed {
+                    // SCREEN 2: INITIAL CONNECTION & VEHICLE VIN CONFIRMATION
+                    VStack(spacing: 0) {
+                        // Header with Disconnect option
+                        HStack {
+                            Text("VEHICLE VERIFICATION")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(Theme.textMuted)
+                            
+                            Spacer()
+                            
+                            Button {
+                                appleHapticImpact()
+                                obd.disconnect()
+                                isVehicleConfirmed = false
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "eject.fill")
+                                        .font(.system(size: 9))
+                                    Text("Disconnect")
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                }
+                                .foregroundColor(Theme.textMuted)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Theme.surfaceElevated)
+                                .clipShape(Capsule())
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+                        
+                        VehicleConfirmationView(obd: obd, profile: profile) {
+                            withAnimation(Theme.appleSpring) {
+                                isVehicleConfirmed = true
+                            }
+                        }
+                    }
+                    .transition(.opacity)
+                } else if !obd.hasCompletedScan && !showingFunctionHub {
+                    // SCREEN 3: VEHICLE DASHBOARD (Pre-scan state with SCAN CAR action)
                     VStack(spacing: 0) {
                         DashboardTopHeader(profile: profile, obd: obd)
                         
@@ -36,7 +81,7 @@ struct RootView: View {
                     }
                     .transition(.opacity)
                 } else {
-                    // SCREEN 3: ALL CAR FUNCTIONS (Unlocked Post-Scan)
+                    // SCREEN 4: ALL CAR FUNCTIONS (Unlocked Post-Scan)
                     VStack(spacing: 0) {
                         // Function Hub Top Navigation Bar
                         HStack(spacing: 12) {
@@ -213,10 +258,10 @@ struct DashboardTopHeader: View {
                     HStack(spacing: 4) {
                         Text(profile.protocolName)
                         Text("·")
-                        Text("Connected")
-                            .foregroundColor(Theme.nominal)
+                        Text(profile.vin)
+                            .foregroundColor(Theme.accent)
                     }
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundColor(Theme.textSecondary)
                 }
             }
