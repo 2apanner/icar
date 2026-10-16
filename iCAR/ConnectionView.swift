@@ -122,28 +122,6 @@ struct ConnectionView: View {
                                     .stroke(Theme.surfaceBorder, lineWidth: 1)
                             )
                             .padding(.horizontal, 16)
-                            
-                            // Simulator / Bench Test Mode
-                            Button {
-                                obd.connectSimulator()
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "cpu")
-                                        .font(.system(size: 13))
-                                    Text("Test with Virtual BMW M3 Simulator")
-                                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                                }
-                                .foregroundColor(Theme.textSecondary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                                .background(Theme.surfaceElevated)
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule().stroke(Theme.surfaceBorder, lineWidth: 1)
-                                )
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .padding(.top, 4)
                         }
                     } else {
                         // SEARCHING / DISCOVERED STATE
