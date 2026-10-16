@@ -1,8 +1,9 @@
-name: iOS Build & CI
+name: iOS Build & Release
 
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -11,9 +12,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
-  build:
-    name: Build iCAR iOS App
+  build-and-release:
+    name: Build & Publish iCAR iOS Release
     runs-on: macos-14
 
     steps:
@@ -31,7 +35,7 @@ jobs:
           fi
           xcodebuild -version
 
-      - name: Build for iOS Simulator
+      - name: Build for iOS Simulator (Debug Verification)
         run: |
           xcodebuild clean build \
             -scheme iCAR \
@@ -51,21 +55,54 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO
 
-      - name: Package Release App
+      - name: Package Release Assets (IPA & ZIP)
         run: |
           APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/iCAR-*/Build/Products/Release-iphoneos -name "iCAR.app" | head -n 1)
           if [ -d "$APP_PATH" ]; then
-            cd "$(dirname "$APP_PATH")"
-            zip -r "$GITHUB_WORKSPACE/iCAR-Release-iOS.zip" "iCAR.app"
-            echo "Successfully packaged iCAR.app to iCAR-Release-iOS.zip"
+            mkdir -p "$GITHUB_WORKSPACE/dist/Payload"
+            cp -r "$APP_PATH" "$GITHUB_WORKSPACE/dist/Payload/"
+            cd "$GITHUB_WORKSPACE/dist"
+            zip -r "$GITHUB_WORKSPACE/iCAR.ipa" "Payload"
+            zip -r "$GITHUB_WORKSPACE/iCAR-Release-iOS.zip" "Payload/iCAR.app"
+            echo "Successfully generated iCAR.ipa and iCAR-Release-iOS.zip"
+            ls -lh "$GITHUB_WORKSPACE"/*.zip "$GITHUB_WORKSPACE"/*.ipa
           else
-            echo "App directory not found"
+            echo "Error: iCAR.app not found in Release-iphoneos"
             exit 1
           fi
 
-      - name: Upload Build Artifact
+      - name: Upload Workflow Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: iCAR-iOS-Release-App
-          path: iCAR-Release-iOS.zip
+          name: iCAR-iOS-Release-Package
+          path: |
+            iCAR.ipa
+            iCAR-Release-iOS.zip
           retention-days: 14
+
+      - name: Publish to GitHub Releases
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && format('iCAR iOS Release {0}', github.ref_name) || 'iCAR iOS Latest Build' }}
+          body: |
+            ### iCAR - Intelligent Connected Automotive Reader
+            Automated production build from GitHub Actions.
+            
+            #### Features:
+            - **Bluetooth OBD-II Discovery:** Real-time over-the-air BLE adapter discovery.
+            - **Vehicle & VIN Verification:** Initial connection screen with decoded specs and verified VIN.
+            - **Supabase Cloud Telematics:** Automatic real-time sync to PostgreSQL backend.
+            - **Diagnostics & CBS Resets:** Mode 01-0A DTCs, live telemetry, and service monitors.
+            
+            #### Download Assets:
+            - **`iCAR.ipa`**: Direct iOS Application Archive for sideloading / AltStore / TrollStore / Configurator.
+            - **`iCAR-Release-iOS.zip`**: Full compiled application bundle.
+          files: |
+            iCAR.ipa
+            iCAR-Release-iOS.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
