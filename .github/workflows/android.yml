@@ -1,0 +1,87 @@
+name: Android Build & Release
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release-android:
+    name: Build & Publish iCAR Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+
+      - name: Build Android Release APK
+        run: |
+          cd android
+          gradle assembleRelease --no-daemon
+
+      - name: Prepare APK Asset
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -f "$APK_PATH" ]; then
+            cp "$APK_PATH" "$GITHUB_WORKSPACE/iCAR-Android.apk"
+            echo "Successfully prepared iCAR-Android.apk"
+            ls -lh "$GITHUB_WORKSPACE/iCAR-Android.apk"
+          else
+            echo "Error: APK not found"
+            exit 1
+          fi
+
+      - name: Upload Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iCAR-Android-Release-APK
+          path: iCAR-Android.apk
+          retention-days: 14
+
+      - name: Publish to GitHub Releases
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v1.0.0' }}
+          name: "iCAR Automotive Diagnostic Suite v1.0.0"
+          body: |
+            ### iCAR - Intelligent Connected Automotive Reader
+            Automated production build for Android & iOS.
+            
+            #### Android Release Package:
+            - **`iCAR-Android.apk`**: Direct Android APK installation package.
+              - Bluetooth LE & Classic RFCOMM support (compatible with all Vgate, Veepeak, ELM327, and generic adapters).
+              - Verified VIN & vehicle identification confirmation gate.
+              - Real-time Supabase cloud database sync (`public.vehicles` and `public.diagnostic_scans`).
+              - Mode 01-0A DTC engine and CBS maintenance monitor resets.
+          files: |
+            iCAR-Android.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

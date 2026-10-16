@@ -1,0 +1,11 @@
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="canvas">#FF0A0A0C</color>
+    <color name="surface">#FF141416</color>
+    <color name="surface_elevated">#FF1E1E22</color>
+    <color name="accent">#FF0A84FF</color>
+    <color name="nominal">#FF30D158</color>
+    <color name="warning">#FFFF9F0A</color>
+    <color name="critical">#FFFF453A</color>
+</resources>
