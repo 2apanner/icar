@@ -218,8 +218,8 @@ class BluetoothTransport(private val context: Context) {
                 }
             }
 
-            override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-                val data = characteristic.value ?: return
+            private fun handleIncomingBytes(data: ByteArray?) {
+                if (data == null) return
                 val text = String(data, Charsets.US_ASCII)
                 synchronized(bleRxBuffer) {
                     bleRxBuffer.append(text)
@@ -229,6 +229,16 @@ class BluetoothTransport(private val context: Context) {
                         bleResponseDeferred?.complete(full)
                     }
                 }
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+                @Suppress("DEPRECATION")
+                handleIncomingBytes(characteristic.value)
+            }
+
+            override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+                handleIncomingBytes(value)
             }
         }
 
@@ -308,13 +318,21 @@ class BluetoothTransport(private val context: Context) {
             bleRxBuffer.setLength(0)
         }
 
-        writeChar.value = payload.toByteArray(Charsets.US_ASCII)
+        val bytes = payload.toByteArray(Charsets.US_ASCII)
         writeChar.writeType = if ((writeChar.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) {
             BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         } else {
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         }
-        gatt.writeValue(writeChar)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeCharacteristic(writeChar, bytes, writeChar.writeType)
+        } else {
+            @Suppress("DEPRECATION")
+            writeChar.value = bytes
+            @Suppress("DEPRECATION")
+            gatt.writeCharacteristic(writeChar)
+        }
 
         val response = withTimeoutOrNull(timeoutMs) { deferred.await() }
         bleResponseDeferred = null
