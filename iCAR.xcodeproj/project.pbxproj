@@ -28,6 +28,7 @@
 		AAA000022345678901234567 /* CarProgrammingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB000022345678901234567 /* CarProgrammingView.swift */; };
 		AAA000032345678901234567 /* VehicleConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB000032345678901234567 /* VehicleConfirmationView.swift */; };
 		AAA000042345678901234567 /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB000042345678901234567 /* SupabaseManager.swift */; };
+		AAA000052345678901234567 /* ECUInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB000052345678901234567 /* ECUInfoView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +54,7 @@
 		BBB000022345678901234567 /* CarProgrammingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CarProgrammingView.swift"; sourceTree = "<group>"; };
 		BBB000032345678901234567 /* VehicleConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "VehicleConfirmationView.swift"; sourceTree = "<group>"; };
 		BBB000042345678901234567 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupabaseManager.swift"; sourceTree = "<group>"; };
+		BBB000052345678901234567 /* ECUInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ECUInfoView.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +99,7 @@
 				BBB000042345678901234567 /* SupabaseManager.swift */,
 				BBB000012345678901234567 /* DashboardScanView.swift */,
 				BBB000022345678901234567 /* CarProgrammingView.swift */,
+				BBB000052345678901234567 /* ECUInfoView.swift */,
 				6EA32E79096554598BCEF407 /* OBDPIDDecoder.swift */,
 			);
 			path = iCAR;
@@ -197,6 +200,7 @@
 				AAA000042345678901234567 /* SupabaseManager.swift in Sources */,
 				AAA000012345678901234567 /* DashboardScanView.swift in Sources */,
 				AAA000022345678901234567 /* CarProgrammingView.swift in Sources */,
+				AAA000052345678901234567 /* ECUInfoView.swift in Sources */,
 				2711FCF3F05157EC8D7D2919 /* OBDPIDDecoder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

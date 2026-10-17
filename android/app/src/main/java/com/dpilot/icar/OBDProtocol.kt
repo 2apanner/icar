@@ -332,4 +332,172 @@ object OBDProtocol {
         }
         return null
     }
+
+    /**
+     * Decodes Mode 09 PID 04 (Calibration ID / CALID).
+     * Returns firmware software ID string.
+     */
+    fun decodeCalibrationId(lines: List<String>): String? {
+        if (isNoData(lines)) return null
+        val asciiChars = StringBuilder()
+        for (line in lines) {
+            val clean = line.replace(Regex("^[0-9A-Fa-f]:"), "").trim()
+            val tokens = clean.split(" ").filter { it.length == 2 && it.matches(Regex("[0-9A-Fa-f]{2}")) }
+            for (token in tokens) {
+                try {
+                    val byteVal = token.toInt(16)
+                    if (byteVal in 0x20..0x7E) {
+                        asciiChars.append(byteVal.toChar())
+                    } else if (byteVal == 0x00 && asciiChars.isNotEmpty() && !asciiChars.endsWith(" ")) {
+                        asciiChars.append(" ")
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+        val result = asciiChars.toString().trim()
+        // Clean out leading echo/header tokens like 'I' or '04'
+        val cleaned = result.replace(Regex("^I\\s*"), "")
+            .replace(Regex("^04\\s*"), "")
+            .trim()
+        return if (cleaned.isNotEmpty()) cleaned else null
+    }
+
+    /**
+     * Decodes Mode 09 PID 06 (Calibration Verification Number / CVN).
+     * Returns flash verification checksums.
+     */
+    fun decodeCVN(lines: List<String>): String? {
+        if (isNoData(lines)) return null
+        val hexBytes = mutableListOf<String>()
+        for (line in lines) {
+            val clean = line.replace(Regex("^[0-9A-Fa-f]:"), "").trim()
+            val tokens = clean.split(" ").filter { it.length == 2 && it.matches(Regex("[0-9A-Fa-f]{2}")) }
+            val idx = tokens.indexOfFirst { it.equals("49", ignoreCase = true) }
+            val dataTokens = if (idx != -1 && idx + 2 < tokens.size) tokens.drop(idx + 3) else tokens
+            hexBytes.addAll(dataTokens)
+        }
+        if (hexBytes.size >= 4) {
+            val checksums = mutableListOf<String>()
+            var i = 0
+            while (i + 3 < hexBytes.size) {
+                val hexWord = "${hexBytes[i]}${hexBytes[i+1]}${hexBytes[i+2]}${hexBytes[i+3]}".uppercase()
+                if (hexWord != "00000000") {
+                    checksums.add(hexWord)
+                }
+                i += 4
+            }
+            if (checksums.isNotEmpty()) {
+                return checksums.joinToString(" · ")
+            }
+        }
+        return null
+    }
+
+    /**
+     * Decodes Mode 09 PID 0A (ECU Name / Descriptor).
+     */
+    fun decodeECUName(lines: List<String>): String? {
+        if (isNoData(lines)) return null
+        val asciiChars = StringBuilder()
+        for (line in lines) {
+            val clean = line.replace(Regex("^[0-9A-Fa-f]:"), "").trim()
+            val tokens = clean.split(" ").filter { it.length == 2 && it.matches(Regex("[0-9A-Fa-f]{2}")) }
+            for (token in tokens) {
+                try {
+                    val byteVal = token.toInt(16)
+                    if (byteVal in 0x20..0x7E) {
+                        asciiChars.append(byteVal.toChar())
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+        val res = asciiChars.toString().trim()
+        return if (res.isNotEmpty()) res else null
+    }
+
+    /**
+     * Decodes Mode 01 PID 21 (Distance Traveled with MIL Active). Formula: (A * 256) + B km
+     */
+    fun decodeDistanceWithMIL(lines: List<String>): Double? {
+        val bytes = extractPIDBytes(lines, 0x21) ?: return null
+        if (bytes.size < 2) return null
+        return ((bytes[0] * 256.0) + bytes[1])
+    }
+
+    /**
+     * Decodes Mode 01 PID 31 (Distance Traveled Since DTCs Cleared). Formula: (A * 256) + B km
+     */
+    fun decodeDistanceSinceCleared(lines: List<String>): Double? {
+        val bytes = extractPIDBytes(lines, 0x31) ?: return null
+        if (bytes.size < 2) return null
+        return ((bytes[0] * 256.0) + bytes[1])
+    }
+
+    /**
+     * Decodes Mode 01 PID 30 (Warm-up Cycles Since DTCs Cleared). Formula: A count
+     */
+    fun decodeWarmupsSinceCleared(lines: List<String>): Int? {
+        val bytes = extractPIDBytes(lines, 0x30) ?: return null
+        if (bytes.isEmpty()) return null
+        return bytes[0]
+    }
+
+    /**
+     * Decodes Mode 01 PID 1F (Engine Run Time Since Start). Formula: (A * 256) + B seconds
+     */
+    fun decodeEngineRunTime(lines: List<String>): Int? {
+        val bytes = extractPIDBytes(lines, 0x1F) ?: return null
+        if (bytes.size < 2) return null
+        return (bytes[0] * 256) + bytes[1]
+    }
+
+    /**
+     * Decodes Mode 01 PID 42 (Control Module Internal Voltage). Formula: ((A * 256) + B) / 1000.0 V
+     */
+    fun decodeControlModuleVoltage(lines: List<String>): Double? {
+        val bytes = extractPIDBytes(lines, 0x42) ?: return null
+        if (bytes.size < 2) return null
+        return ((bytes[0] * 256.0) + bytes[1]) / 1000.0
+    }
+
+    /**
+     * Decodes Mode 01 PID 01 (Monitor Status Since DTCs Cleared / Smog Readiness).
+     */
+    fun decodeSmogMonitors(lines: List<String>): Pair<Boolean, List<SmogMonitorItem>> {
+        val bytes = extractPIDBytes(lines, 0x01) ?: return Pair(false, emptyList())
+        if (bytes.size < 4) return Pair(false, emptyList())
+
+        val byteA = bytes[0]
+        val byteB = bytes[1]
+        val byteC = bytes[2]
+        val byteD = bytes[3]
+
+        val milOn = (byteA and 0x80) != 0
+
+        val monitors = mutableListOf<SmogMonitorItem>()
+
+        // Continuous Monitors (Byte B)
+        // Misfire: bit 0 supported, bit 4 incomplete
+        monitors.add(SmogMonitorItem("Misfire Monitor", isReady = (byteB and 0x10) == 0, isSupported = (byteB and 0x01) != 0))
+        // Fuel System: bit 1 supported, bit 5 incomplete
+        monitors.add(SmogMonitorItem("Fuel System", isReady = (byteB and 0x20) == 0, isSupported = (byteB and 0x02) != 0))
+        // Comprehensive Component: bit 2 supported, bit 6 incomplete
+        monitors.add(SmogMonitorItem("Comprehensive Component", isReady = (byteB and 0x40) == 0, isSupported = (byteB and 0x04) != 0))
+
+        // Non-Continuous Monitors (Byte C & D)
+        // Catalyst: Byte C bit 0 supported, bit 1 incomplete
+        monitors.add(SmogMonitorItem("Catalyst Monitor", isReady = (byteC and 0x02) == 0, isSupported = (byteC and 0x01) != 0))
+        // Evaporative System: Byte C bit 2 supported, bit 3 incomplete
+        monitors.add(SmogMonitorItem("Evaporative System", isReady = (byteC and 0x08) == 0, isSupported = (byteC and 0x04) != 0))
+        // Secondary Air: Byte C bit 4 supported, bit 5 incomplete
+        monitors.add(SmogMonitorItem("Secondary Air System", isReady = (byteC and 0x20) == 0, isSupported = (byteC and 0x10) != 0))
+        // Oxygen Sensor: Byte D bit 0 supported, bit 1 incomplete
+        monitors.add(SmogMonitorItem("Oxygen Sensor", isReady = (byteD and 0x02) == 0, isSupported = (byteD and 0x01) != 0))
+        // Oxygen Sensor Heater: Byte D bit 2 supported, bit 3 incomplete
+        monitors.add(SmogMonitorItem("Oxygen Sensor Heater", isReady = (byteD and 0x08) == 0, isSupported = (byteD and 0x04) != 0))
+        // EGR / VVT System: Byte D bit 4 supported, bit 5 incomplete
+        monitors.add(SmogMonitorItem("EGR / VVT System", isReady = (byteD and 0x20) == 0, isSupported = (byteD and 0x10) != 0))
+
+        return Pair(milOn, monitors)
+    }
 }

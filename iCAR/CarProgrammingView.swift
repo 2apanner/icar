@@ -1,104 +1,20 @@
 import SwiftUI
 
-struct VehicleTimerSetting: Identifiable {
-    let id: String
-    let name: String
-    let description: String
-    let icon: String
-    let options: [String]
-    var selectedOption: String
-}
-
-struct VehicleToggleSetting: Identifiable {
-    let id: String
-    let name: String
-    let description: String
-    let icon: String
-    var isEnabled: Bool
-}
-
 struct CarProgrammingView: View {
     @ObservedObject var obd: OBDManager
-    
-    @State private var timerSettings: [VehicleTimerSetting] = [
-        VehicleTimerSetting(
-            id: "welcome_light",
-            name: "Welcome Light Duration",
-            description: "Controls how long exterior headlights and door handle puddle lights stay illuminated upon unlocking.",
-            icon: "flashlight.on.fill",
-            options: ["Off", "10 sec", "20 sec", "30 sec", "60 sec"],
-            selectedOption: "20 sec"
-        ),
-        VehicleTimerSetting(
-            id: "follow_me_home",
-            name: "Pathway Follow-Me-Home Timer",
-            description: "Keeps low-beam headlights on after ignition off to illuminate your walkway.",
-            icon: "sun.max.fill",
-            options: ["Off", "20 sec", "40 sec", "60 sec", "90 sec"],
-            selectedOption: "40 sec"
-        ),
-        VehicleTimerSetting(
-            id: "window_delay",
-            name: "Comfort Window Closure Delay",
-            description: "Delay threshold when holding lock button on remote key fob before all power windows and sunroof roll up.",
-            icon: "arrow.up.and.down.square.fill",
-            options: ["Immediate", "1.5 sec", "2.5 sec", "3.5 sec"],
-            selectedOption: "1.5 sec"
-        ),
-        VehicleTimerSetting(
-            id: "auto_lock_speed",
-            name: "Auto Door Lock Threshold",
-            description: "Automatically locks all doors once the vehicle accelerates past this speed threshold.",
-            icon: "lock.shield.fill",
-            options: ["Off", "5 km/h", "10 km/h", "16 km/h", "20 km/h"],
-            selectedOption: "16 km/h"
-        )
-    ]
-    
-    @State private var convenienceToggles: [VehicleToggleSetting] = [
-        VehicleToggleSetting(
-            id: "start_stop_mem",
-            name: "Auto Start-Stop Memory",
-            description: "Remembers last selected Auto Start-Stop state instead of defaulting ON each ignition cycle.",
-            icon: "engine.combustion.fill",
-            isEnabled: true
-        ),
-        VehicleToggleSetting(
-            id: "acoustic_lock",
-            name: "Acoustic Confirmation Chirp",
-            description: "Emits a short confirmation chirp from horn/alarm siren upon locking with remote fob.",
-            icon: "speaker.wave.2.fill",
-            isEnabled: true
-        ),
-        VehicleToggleSetting(
-            id: "mirror_fold",
-            name: "Power Mirrors Auto-Fold",
-            description: "Folds side mirrors automatically when vehicle is locked and unfolds on engine ignition.",
-            icon: "car.side.fill",
-            isEnabled: true
-        ),
-        VehicleToggleSetting(
-            id: "daytime_running",
-            name: "Daytime Running Angel Eyes",
-            description: "Enables signature high-intensity LED daytime running halos in headlights.",
-            icon: "headlight.daytime.fill",
-            isEnabled: true
-        )
-    ]
-    
-    @State private var isApplyingChange = false
-    @State private var applyingMessage = ""
-    @State private var showAppliedToast = false
+    @State private var showingRestoreAlert = false
     
     var body: some View {
+        let safety = obd.checkCodingSafetyInterlock()
+        
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 16) {
                 // Header
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Car Functions & Programming")
+                    Text("Car Functions & Coding")
                         .font(.system(size: 26, weight: .bold))
                         .foregroundColor(Theme.textPrimary)
-                    Text("Convenience timers, lighting durations & vehicle behavior settings")
+                    Text("Comfort timers, lighting durations & body electronics customization")
                         .font(.system(size: 13))
                         .foregroundColor(Theme.textSecondary)
                 }
@@ -106,208 +22,263 @@ struct CarProgrammingView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 
-                // Safety Shield Badge
-                HStack(spacing: 10) {
-                    Image(systemName: "shield.checkered")
-                        .font(.system(size: 20))
-                        .foregroundColor(Theme.nominal)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("SAFE CONFIGURATION MODE · ZERO FLASH RISK")
+                // Dynamic Safety Interlock Status Card
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: safety.isSafe ? "checkmark.shield.fill" : "exclamationmark.shield.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(safety.isSafe ? Theme.nominal : Theme.warning)
+                        
+                        Text(safety.isSafe ? "SAFE CONFIGURATION ACTIVE · ZERO FLASH RISK" : "SAFETY INTERLOCK ACTIVE")
                             .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(Theme.nominal)
-                        Text("Changes modify high-level convenience parameters only. DME bootloader, engine maps, and powertrain firmware are strictly isolated and cannot be corrupted.")
-                            .font(.system(size: 11))
+                            .foregroundColor(safety.isSafe ? Theme.nominal : Theme.warning)
+                        
+                        Spacer()
+                    }
+                    
+                    Text(safety.isSafe ? "Battery potential (\(String(format: "%.1f", safety.currentVoltage))V ≥ 12.4V) is stable. Engine is OFF. DME/DDE engine maps and DSC braking controllers are isolated and read-only." : (safety.reason ?? "Safety guard prevents writing to vehicle modules."))
+                        .font(.system(size: 11))
+                        .foregroundColor(Theme.textSecondary)
+                        .lineSpacing(2)
+                }
+                .padding(14)
+                .background(safety.isSafe ? Theme.surface : Theme.warning.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(safety.isSafe ? Theme.nominal.opacity(0.3) : Theme.warning, lineWidth: 1)
+                )
+                .padding(.horizontal, 16)
+                
+                // OEM Factory Restore Action Banner
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("OEM FACTORY RESTORE")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(Theme.textMuted)
+                        Text("Revert all comfort settings to original factory baseline")
+                            .font(.system(size: 12))
                             .foregroundColor(Theme.textSecondary)
                     }
+                    
+                    Spacer()
+                    
+                    Button {
+                        appleHapticImpact()
+                        showingRestoreAlert = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("Restore")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .foregroundColor(Theme.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Theme.surfaceElevated)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(Theme.accent.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .disabled(!safety.isSafe || obd.isCodingBusy)
+                    .opacity(!safety.isSafe || obd.isCodingBusy ? 0.5 : 1.0)
                 }
-                .padding(12)
+                .padding(14)
                 .background(Theme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Theme.nominal.opacity(0.3), lineWidth: 1)
+                        .stroke(Theme.surfaceBorder, lineWidth: 1)
                 )
                 .padding(.horizontal, 16)
                 
                 // Status Overlay if applying change
-                if isApplyingChange {
+                if obd.isCodingBusy {
                     HStack(spacing: 12) {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: Theme.accent))
-                        Text(applyingMessage)
-                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        Text(obd.codingStatusMessage)
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
                             .foregroundColor(Theme.accent)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(14)
+                    .padding(12)
                     .background(Theme.surfaceElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Theme.accent.opacity(0.3), lineWidth: 1)
+                            .stroke(Theme.accent.opacity(0.4), lineWidth: 1)
                     )
                     .padding(.horizontal, 16)
                 }
                 
-                // MARK: - Section 1: Vehicle Convenience Timers
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "timer")
-                            .font(.system(size: 16))
-                            .foregroundColor(Theme.accent)
-                        Text("VEHICLE CONVENIENCE TIMERS")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(Theme.textSecondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 4)
-                    
-                    VStack(spacing: 10) {
-                        ForEach($timerSettings) { $setting in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(spacing: 10) {
+                // Section 1: Toggle Parameters
+                let toggles = obd.codingItems.filter { $0.isToggle }
+                if !toggles.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "slider.horizontal.2.square")
+                                .font(.system(size: 14))
+                                .foregroundColor(Theme.accent)
+                            Text("VEHICLE BEHAVIOR FUNCTIONS")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(Theme.textSecondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 4)
+                        
+                        VStack(spacing: 8) {
+                            ForEach(toggles) { item in
+                                HStack(spacing: 12) {
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .fill(Theme.accent.opacity(0.12))
+                                            .fill((item.currentValue == "Enabled" || item.currentValue.contains("Active")) ? Theme.accent.opacity(0.12) : Theme.surfaceElevated)
                                             .frame(width: 34, height: 34)
-                                        Image(systemName: setting.icon)
+                                        Image(systemName: item.icon)
                                             .font(.system(size: 15))
-                                            .foregroundColor(Theme.accent)
+                                            .foregroundColor((item.currentValue == "Enabled" || item.currentValue.contains("Active")) ? Theme.accent : Theme.textSecondary)
                                     }
                                     
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(setting.name)
+                                        Text(item.name)
                                             .font(.system(size: 14, weight: .semibold))
                                             .foregroundColor(Theme.textPrimary)
-                                        Text(setting.description)
+                                        Text(item.description)
                                             .font(.system(size: 11))
                                             .foregroundColor(Theme.textSecondary)
                                             .lineLimit(2)
                                     }
                                     
                                     Spacer()
-                                }
-                                
-                                // Options Menu
-                                HStack {
-                                    Text("TIMER DURATION:")
-                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                        .foregroundColor(Theme.textMuted)
                                     
-                                    Spacer()
-                                    
-                                    Menu {
-                                        ForEach(setting.options, id: \.self) { opt in
-                                            Button(opt) {
-                                                setting.selectedOption = opt
-                                                applySetting(name: setting.name, value: opt)
+                                    let isChecked = item.currentValue == "Enabled" || item.currentValue.contains("Active")
+                                    Toggle("", isOn: Binding(
+                                        get: { isChecked },
+                                        set: { newVal in
+                                            appleHapticImpact()
+                                            let targetVal = if item.options.count == 2 {
+                                                newVal ? item.options[1] : item.options[0]
+                                            } else {
+                                                newVal ? "Enabled" : "Disabled"
                                             }
+                                            obd.applyVehicleCoding(item: item, newValue: targetVal)
                                         }
-                                    } label: {
-                                        HStack(spacing: 6) {
-                                            Text(setting.selectedOption)
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundColor(Theme.accent)
-                                            Image(systemName: "chevron.up.chevron.down")
-                                                .font(.system(size: 9))
-                                                .foregroundColor(Theme.accent)
-                                        }
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(Theme.surfaceElevated)
-                                        .cornerRadius(6)
-                                    }
+                                    ))
+                                    .labelsHidden()
+                                    .tint(Theme.accent)
+                                    .disabled(!safety.isSafe || obd.isCodingBusy)
                                 }
-                                .padding(.top, 2)
+                                .padding(12)
+                                .background(Theme.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(Theme.surfaceBorder, lineWidth: 1)
+                                    )
                             }
-                            .padding(12)
-                            .background(Theme.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(Theme.surfaceBorder, lineWidth: 1)
-                            )
                         }
                     }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
                 
-                // MARK: - Section 2: Vehicle Behavior Functions
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "slider.horizontal.2.square")
-                            .font(.system(size: 16))
-                            .foregroundColor(Theme.accent)
-                        Text("VEHICLE BEHAVIOR FUNCTIONS")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundColor(Theme.textSecondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 4)
-                    
-                    VStack(spacing: 10) {
-                        ForEach($convenienceToggles) { $toggleSetting in
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(toggleSetting.isEnabled ? Theme.accent.opacity(0.12) : Theme.surfaceElevated)
-                                        .frame(width: 34, height: 34)
-                                    Image(systemName: toggleSetting.icon)
-                                        .font(.system(size: 15))
-                                        .foregroundColor(toggleSetting.isEnabled ? Theme.accent : Theme.textSecondary)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(toggleSetting.name)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(Theme.textPrimary)
-                                    Text(toggleSetting.description)
-                                        .font(.system(size: 11))
-                                        .foregroundColor(Theme.textSecondary)
-                                        .lineLimit(2)
-                                }
-                                
-                                Spacer()
-                                
-                                Toggle("", isOn: Binding(
-                                    get: { toggleSetting.isEnabled },
-                                    set: { newValue in
-                                        toggleSetting.isEnabled = newValue
-                                        applySetting(name: toggleSetting.name, value: newValue ? "ENABLED" : "DISABLED")
+                // Section 2: Timer & Multi-Option Parameters
+                let selectors = obd.codingItems.filter { !$0.isToggle }
+                if !selectors.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "timer")
+                                .font(.system(size: 14))
+                                .foregroundColor(Theme.accent)
+                            Text("CONVENIENCE TIMERS & THRESHOLDS")
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(Theme.textSecondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 4)
+                        
+                        VStack(spacing: 8) {
+                            ForEach(selectors) { item in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: 10) {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .fill(Theme.accent.opacity(0.12))
+                                                .frame(width: 34, height: 34)
+                                            Image(systemName: item.icon)
+                                                .font(.system(size: 15))
+                                                .foregroundColor(Theme.accent)
+                                        }
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.name)
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(Theme.textPrimary)
+                                            Text(item.description)
+                                                .font(.system(size: 11))
+                                                .foregroundColor(Theme.textSecondary)
+                                                .lineLimit(2)
+                                        }
+                                        
+                                        Spacer()
                                     }
-                                ))
-                                .labelsHidden()
-                                .tint(Theme.accent)
+                                    
+                                    HStack {
+                                        Text("CURRENT VALUE:")
+                                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                            .foregroundColor(Theme.textMuted)
+                                        
+                                        Spacer()
+                                        
+                                        Menu {
+                                            ForEach(item.options, id: \.self) { opt in
+                                                Button(opt) {
+                                                    appleHapticImpact()
+                                                    obd.applyVehicleCoding(item: item, newValue: opt)
+                                                }
+                                            }
+                                        } label: {
+                                            HStack(spacing: 6) {
+                                                Text(item.currentValue)
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundColor(Theme.accent)
+                                                Image(systemName: "chevron.up.chevron.down")
+                                                    .font(.system(size: 9))
+                                                    .foregroundColor(Theme.accent)
+                                            }
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .background(Theme.surfaceElevated)
+                                            .cornerRadius(6)
+                                        }
+                                        .disabled(!safety.isSafe || obd.isCodingBusy)
+                                    }
+                                    .padding(.top, 2)
+                                }
+                                .padding(12)
+                                .background(Theme.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(Theme.surfaceBorder, lineWidth: 1)
+                                )
                             }
-                            .padding(12)
-                            .background(Theme.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(Theme.surfaceBorder, lineWidth: 1)
-                            )
                         }
                     }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
             }
             .padding(.bottom, 30)
         }
-    }
-    
-    private func applySetting(name: String, value: String) {
-        appleHapticSuccess()
-        isApplyingChange = true
-        applyingMessage = "Applying \(name)..."
-        obd.log("CAR FUNCTION: Sending UDS 0x2E write for [\(name)] = \(value)", direction: .system)
-        
-        Task {
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            await MainActor.run {
-                isApplyingChange = false
-                obd.log("CAR FUNCTION: Successfully updated \(name) to \(value)", direction: .system)
+        .alert("Restore Factory Defaults?", isPresented: $showingRestoreAlert) {
+            Button("Yes, Restore Baseline", role: .destructive) {
+                appleHapticSuccess()
+                obd.restoreFactoryCoding()
             }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will rewrite all vehicle comfort parameters back to original OEM factory specification. Drivetrain and safety computers are unaffected.")
         }
     }
 }

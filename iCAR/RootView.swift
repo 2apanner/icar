@@ -10,9 +10,10 @@ struct RootView: View {
     }()
     @State private var selectedTab: Int = {
         if ProcessInfo.processInfo.arguments.contains("-tabSensors") { return 1 }
-        if ProcessInfo.processInfo.arguments.contains("-tabBattery") { return 2 }
-        if ProcessInfo.processInfo.arguments.contains("-tabCarFunctions") { return 3 }
-        if ProcessInfo.processInfo.arguments.contains("-tabTerminal") { return 4 }
+        if ProcessInfo.processInfo.arguments.contains("-tabECUInfo") { return 2 }
+        if ProcessInfo.processInfo.arguments.contains("-tabBattery") { return 3 }
+        if ProcessInfo.processInfo.arguments.contains("-tabCoding") || ProcessInfo.processInfo.arguments.contains("-tabCarFunctions") { return 4 }
+        if ProcessInfo.processInfo.arguments.contains("-tabTerminal") { return 5 }
         return 0
     }()
     
@@ -25,7 +26,9 @@ struct RootView: View {
                 // SCREEN 1: HOME SCREEN (iCAR Logo + Search & Connect OBD-II)
                 ConnectionView(obd: obd)
                     .onAppear {
-                        isVehicleConfirmed = false
+                        if !ProcessInfo.processInfo.arguments.contains("-showFunctions") && !ProcessInfo.processInfo.arguments.contains("-autoScanDemo") {
+                            isVehicleConfirmed = false
+                        }
                     }
                 
             case .connected(let profile):
@@ -161,10 +164,12 @@ struct RootView: View {
                             case 1:
                                 LiveDataView(obd: obd)
                             case 2:
-                                BatteryServiceView(obd: obd)
+                                ECUInfoView(obd: obd)
                             case 3:
-                                CarProgrammingView(obd: obd)
+                                BatteryServiceView(obd: obd)
                             case 4:
+                                CarProgrammingView(obd: obd)
+                            case 5:
                                 FlightRecorderView(obd: obd)
                             default:
                                 DiagnosticsView(obd: obd)
@@ -193,8 +198,8 @@ struct RootView: View {
                             }
                             
                             AppleTabItem(
-                                title: "Battery & Svc",
-                                icon: "battery.100.bolt",
+                                title: "ECU Info",
+                                icon: "cpu.fill",
                                 isSelected: selectedTab == 2
                             ) {
                                 appleHapticImpact()
@@ -202,8 +207,8 @@ struct RootView: View {
                             }
                             
                             AppleTabItem(
-                                title: "Car Functions",
-                                icon: "slider.horizontal.2.square",
+                                title: "Battery",
+                                icon: "battery.100.bolt",
                                 isSelected: selectedTab == 3
                             ) {
                                 appleHapticImpact()
@@ -211,12 +216,21 @@ struct RootView: View {
                             }
                             
                             AppleTabItem(
-                                title: "Terminal",
-                                icon: "terminal.fill",
+                                title: "Coding",
+                                icon: "slider.horizontal.2.square",
                                 isSelected: selectedTab == 4
                             ) {
                                 appleHapticImpact()
                                 withAnimation(Theme.appleSpring) { selectedTab = 4 }
+                            }
+                            
+                            AppleTabItem(
+                                title: "Terminal",
+                                icon: "terminal.fill",
+                                isSelected: selectedTab == 5
+                            ) {
+                                appleHapticImpact()
+                                withAnimation(Theme.appleSpring) { selectedTab = 5 }
                             }
                         }
                         .padding(.top, 8)

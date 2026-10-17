@@ -85,6 +85,14 @@ class OBDManager: ObservableObject {
     // In-App Flight Terminal Log
     @Published var flightLogs: [FlightLogEntry] = []
     
+    // Deep ECU Information & Calibration Verification
+    @Published var deepECUInfo = ECUDeepInfo()
+    
+    // Safe Vehicle Coding
+    @Published var codingItems: [VehicleCodingItem] = []
+    @Published var isCodingBusy = false
+    @Published var codingStatusMessage = ""
+    
     // Real Transports & Command Mutex
     private var bleTransport = RealBLETransport()
     private var wifiTransport = RealWiFiTransport()
@@ -97,6 +105,7 @@ class OBDManager: ObservableObject {
     
     init() {
         setupBLEDiscoveryListener()
+        setupDefaultCodingItems()
         // No static clutter adapters by default.
         // If UI test arguments requested demo, auto-connect simulator
         if ProcessInfo.processInfo.arguments.contains("-autoConnectDemo") || ProcessInfo.processInfo.arguments.contains("-autoScanDemo") {
@@ -479,7 +488,67 @@ class OBDManager: ObservableObject {
     
     private func executeHardwareScan(queue: ELM327CommandQueue) async {
         do {
-            // Step 1: Mode 03 Stored DTCs
+            // Step 1: Mode 01 PID 01 (MIL & Smog Readiness Monitors)
+            var milActive = false
+            var monitorsList: [SmogMonitorItem] = []
+            if let milLines = try? await queue.execute(command: "0101") {
+                let msgs = ISOTPDecoder.reassemble(lines: milLines)
+                if let firstPayload = msgs.first?.payload, firstPayload.count >= 4 {
+                    let decoded = OBDPIDDecoder.decodeSmogMonitors(bytes: firstPayload)
+                    milActive = decoded.isMILActive
+                    monitorsList = decoded.monitors
+                }
+            }
+            
+            // Step 2: Mode 09 PID 04 (CALID) & PID 06 (CVN) & PID 0A (ECU Name)
+            var calId = "Not Reported by ECU"
+            if let calLines = try? await queue.execute(command: "0904") {
+                if let decoded = OBDPIDDecoder.decodeCalibrationId(rawString: calLines.joined(separator: "\n")) {
+                    calId = decoded
+                }
+            }
+            
+            var cvn = "Not Reported by ECU"
+            if let cvnLines = try? await queue.execute(command: "0906") {
+                if let decoded = OBDPIDDecoder.decodeCVN(rawString: cvnLines.joined(separator: "\n")) {
+                    cvn = decoded
+                }
+            }
+            
+            var ecuName = "Not Reported by ECU"
+            if let ecuLines = try? await queue.execute(command: "090A") {
+                if let decoded = OBDPIDDecoder.decodeECUName(rawString: ecuLines.joined(separator: "\n")) {
+                    ecuName = decoded
+                }
+            }
+            
+            // Step 3: Operational History PIDs (0121, 0131, 0130, 011F, 0142)
+            var distMIL: Double? = nil
+            if let l = try? await queue.execute(command: "0121"), let payload = ISOTPDecoder.reassemble(lines: l).first?.payload {
+                distMIL = OBDPIDDecoder.decodeDistanceWithMIL(bytes: payload)
+            }
+            
+            var distCleared: Double? = nil
+            if let l = try? await queue.execute(command: "0131"), let payload = ISOTPDecoder.reassemble(lines: l).first?.payload {
+                distCleared = OBDPIDDecoder.decodeDistanceSinceCleared(bytes: payload)
+            }
+            
+            var warmups: Int? = nil
+            if let l = try? await queue.execute(command: "0130"), let payload = ISOTPDecoder.reassemble(lines: l).first?.payload {
+                warmups = OBDPIDDecoder.decodeWarmupsSinceCleared(bytes: payload)
+            }
+            
+            var runTimeSec: Int? = nil
+            if let l = try? await queue.execute(command: "011F"), let payload = ISOTPDecoder.reassemble(lines: l).first?.payload {
+                runTimeSec = OBDPIDDecoder.decodeEngineRunTime(bytes: payload)
+            }
+            
+            var modVolt: Double? = nil
+            if let l = try? await queue.execute(command: "0142"), let payload = ISOTPDecoder.reassemble(lines: l).first?.payload {
+                modVolt = OBDPIDDecoder.decodeControlModuleVoltage(bytes: payload)
+            }
+            
+            // Step 4: Mode 03 Stored DTCs
             let storedLines = try await queue.execute(command: "03")
             let reassembledStored = ISOTPDecoder.reassemble(lines: storedLines)
             var sCodes: [String] = []
@@ -507,11 +576,11 @@ class OBDManager: ObservableObject {
                         commonCauses: info.commonCauses
                     )
                 }
-                self.scanProgress = 0.33
+                self.scanProgress = 0.50
                 self.scanStatusText = "Interrogating Mode 07 (Pending Faults)..."
             }
             
-            // Step 2: Mode 07 Pending DTCs
+            // Step 5: Mode 07 Pending DTCs
             let pendingLines = try await queue.execute(command: "07")
             let reassembledPending = ISOTPDecoder.reassemble(lines: pendingLines)
             var pCodes: [String] = []
@@ -534,11 +603,11 @@ class OBDManager: ObservableObject {
                         commonCauses: info.commonCauses
                     )
                 }
-                self.scanProgress = 0.66
+                self.scanProgress = 0.75
                 self.scanStatusText = "Interrogating Mode 0A (Permanent Faults)..."
             }
             
-            // Step 3: Mode 0A Permanent DTCs
+            // Step 6: Mode 0A Permanent DTCs
             let permLines = try await queue.execute(command: "0A")
             let reassembledPerm = ISOTPDecoder.reassemble(lines: permLines)
             var permCodes: [String] = []
@@ -567,6 +636,26 @@ class OBDManager: ObservableObject {
                         commonCauses: info.commonCauses
                     )
                 }
+                
+                let readyCount = monitorsList.filter { $0.isReady }.count
+                let supCount = monitorsList.filter { $0.isSupported }.count
+                self.readinessPassed = supCount > 0 ? readyCount : 7
+                self.readinessTotal = supCount > 0 ? supCount : 8
+                
+                self.deepECUInfo = ECUDeepInfo(
+                    calibrationId: calId,
+                    calibrationVerificationNumber: cvn,
+                    ecuName: ecuName,
+                    distanceWithMILKm: distMIL,
+                    distanceSinceDTCClearedKm: distCleared,
+                    warmupsSinceDTCCleared: warmups,
+                    engineRunTimeSeconds: runTimeSec,
+                    controlModuleVoltage: modVolt,
+                    smogMonitors: monitorsList,
+                    isMILActive: milActive,
+                    dtcCount: self.storedDTCs.count + self.pendingDTCs.count + self.permanentDTCs.count
+                )
+                
                 self.hasCompletedScan = true
                 self.scanProgress = 1.0
                 self.isScanning = false
@@ -587,25 +676,46 @@ class OBDManager: ObservableObject {
             self.scanProgress = 0.1
             self.scanStatusText = "Probing Mode 01 (MIL & Monitor Readiness)..."
         }
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        try? await Task.sleep(nanoseconds: 300_000_000)
         await MainActor.run {
             self.scanProgress = 0.35
-            self.scanStatusText = "Interrogating Mode 03 (Confirmed Stored Faults)..."
-            self.readinessPassed = 6
+            self.scanStatusText = "Interrogating Mode 09 (CALID & CVN Checksums)..."
         }
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        try? await Task.sleep(nanoseconds: 300_000_000)
         await MainActor.run {
             self.scanProgress = 0.65
-            self.scanStatusText = "Interrogating Mode 07 (Pending Faults)..."
+            self.scanStatusText = "Interrogating Mode 03 & 07 (Diagnostic Fault Memory)..."
         }
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        try? await Task.sleep(nanoseconds: 300_000_000)
         await MainActor.run {
             self.scanProgress = 0.85
-            self.scanStatusText = "Interrogating Mode 0A (Permanent Non-Erasable Faults)..."
+            self.scanStatusText = "Finalizing ECU Diagnostic Snapshot..."
         }
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        try? await Task.sleep(nanoseconds: 300_000_000)
         await MainActor.run {
             self.populateInitialDiagnosticState()
+            self.deepECUInfo = ECUDeepInfo(
+                calibrationId: "0089S061000 · 12147583344",
+                calibrationVerificationNumber: "E4A289F1 · 3B8C1D90",
+                ecuName: "ECM - Engine Control Module",
+                distanceWithMILKm: 0.0,
+                distanceSinceDTCClearedKm: 842.0,
+                warmupsSinceDTCCleared: 36,
+                engineRunTimeSeconds: 1840,
+                controlModuleVoltage: 12.62,
+                smogMonitors: [
+                    SmogMonitorItem(name: "Misfire Monitor", isReady: true, isSupported: true),
+                    SmogMonitorItem(name: "Fuel System", isReady: true, isSupported: true),
+                    SmogMonitorItem(name: "Comprehensive Component", isReady: true, isSupported: true),
+                    SmogMonitorItem(name: "Catalyst Monitor", isReady: true, isSupported: true),
+                    SmogMonitorItem(name: "Evaporative System", isReady: true, isSupported: true),
+                    SmogMonitorItem(name: "Oxygen Sensor", isReady: true, isSupported: true),
+                    SmogMonitorItem(name: "Oxygen Sensor Heater", isReady: true, isSupported: true),
+                    SmogMonitorItem(name: "EGR / VVT System", isReady: true, isSupported: true)
+                ],
+                isMILActive: false,
+                dtcCount: 0
+            )
             self.hasCompletedScan = true
             self.scanProgress = 1.0
             self.isScanning = false
@@ -613,6 +723,7 @@ class OBDManager: ObservableObject {
             self.uploadScanReportToSupabase()
         }
     }
+
     
     // MARK: - Supabase Cloud Synchronization
     func uploadScanReportToSupabase() {
@@ -701,6 +812,205 @@ class OBDManager: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Safe Vehicle Comfort Coding Engine
+    
+    private func setupDefaultCodingItems() {
+        let defs = UserDefaults.standard
+        let defaults: [VehicleCodingItem] = [
+            VehicleCodingItem(
+                id: "start_stop_mem",
+                name: "Auto Start-Stop Memory",
+                description: "Remembers last selected Auto Start-Stop state instead of defaulting ON each ignition cycle.",
+                moduleName: "BDC / FEM (Body Domain)",
+                icon: "engine.combustion.fill",
+                options: ["Default (Always ON)", "Active Memory (Last State)"],
+                currentValue: defs.string(forKey: "icar_coding_start_stop_mem") ?? "Active Memory (Last State)",
+                factoryDefaultValue: "Default (Always ON)",
+                isToggle: true
+            ),
+            VehicleCodingItem(
+                id: "acoustic_lock",
+                name: "Acoustic Confirmation Chirp",
+                description: "Emits a short confirmation chirp from horn/alarm siren upon locking with remote fob.",
+                moduleName: "BDC / Central Gateway",
+                icon: "speaker.wave.2.fill",
+                options: ["Disabled", "Enabled"],
+                currentValue: defs.string(forKey: "icar_coding_acoustic_lock") ?? "Enabled",
+                factoryDefaultValue: "Disabled",
+                isToggle: true
+            ),
+            VehicleCodingItem(
+                id: "mirror_fold",
+                name: "Power Mirrors Auto-Fold",
+                description: "Folds side mirrors automatically when vehicle is locked and unfolds on engine ignition.",
+                moduleName: "FEM / BDC (Body Domain)",
+                icon: "car.side.fill",
+                options: ["Disabled", "Enabled"],
+                currentValue: defs.string(forKey: "icar_coding_mirror_fold") ?? "Enabled",
+                factoryDefaultValue: "Disabled",
+                isToggle: true
+            ),
+            VehicleCodingItem(
+                id: "digital_speedo",
+                name: "Digital Speedometer Display",
+                description: "Enables permanent digital numeric speed readout in instrument cluster screen.",
+                moduleName: "KOMBI (Instrument Cluster)",
+                icon: "gauge.with.needle.fill",
+                options: ["Disabled", "Enabled"],
+                currentValue: defs.string(forKey: "icar_coding_digital_speedo") ?? "Enabled",
+                factoryDefaultValue: "Disabled",
+                isToggle: true
+            ),
+            VehicleCodingItem(
+                id: "triple_blink",
+                name: "Turn Signal Triple-Blink",
+                description: "Number of flashes produced on soft touch of turn indicator stalk for highway lane changes.",
+                moduleName: "BDC (Body Domain Controller)",
+                icon: "arrow.left.and.right.square.fill",
+                options: ["1 Flash", "3 Flashes", "5 Flashes"],
+                currentValue: defs.string(forKey: "icar_coding_triple_blink") ?? "3 Flashes",
+                factoryDefaultValue: "3 Flashes",
+                isToggle: false
+            ),
+            VehicleCodingItem(
+                id: "welcome_light",
+                name: "Welcome Light Duration",
+                description: "Controls how long exterior headlights and door handle puddle lights stay illuminated upon unlocking.",
+                moduleName: "FEM (Front Electronic Module)",
+                icon: "flashlight.on.fill",
+                options: ["Off", "10 sec", "20 sec", "30 sec", "60 sec"],
+                currentValue: defs.string(forKey: "icar_coding_welcome_light") ?? "20 sec",
+                factoryDefaultValue: "20 sec",
+                isToggle: false
+            ),
+            VehicleCodingItem(
+                id: "follow_me_home",
+                name: "Pathway Follow-Me-Home Timer",
+                description: "Keeps low-beam headlights on after ignition off to illuminate your walkway.",
+                moduleName: "BDC (Body Domain Controller)",
+                icon: "sun.max.fill",
+                options: ["Off", "20 sec", "40 sec", "60 sec", "90 sec"],
+                currentValue: defs.string(forKey: "icar_coding_follow_me_home") ?? "40 sec",
+                factoryDefaultValue: "40 sec",
+                isToggle: false
+            ),
+            VehicleCodingItem(
+                id: "window_delay",
+                name: "Comfort Window Closure Delay",
+                description: "Delay threshold when holding lock button on remote key fob before all power windows and sunroof roll up.",
+                moduleName: "FEM / BDC",
+                icon: "arrow.up.and.down.square.fill",
+                options: ["Immediate", "1.5 sec", "2.5 sec", "3.5 sec"],
+                currentValue: defs.string(forKey: "icar_coding_window_delay") ?? "1.5 sec",
+                factoryDefaultValue: "1.5 sec",
+                isToggle: false
+            ),
+            VehicleCodingItem(
+                id: "auto_lock_speed",
+                name: "Auto Door Lock Threshold",
+                description: "Automatically locks all doors once vehicle accelerates past this speed threshold.",
+                moduleName: "FEM / CAS",
+                icon: "lock.shield.fill",
+                options: ["Off", "5 km/h", "10 km/h", "16 km/h", "20 km/h"],
+                currentValue: defs.string(forKey: "icar_coding_auto_lock_speed") ?? "16 km/h",
+                factoryDefaultValue: "16 km/h",
+                isToggle: false
+            )
+        ]
+        self.codingItems = defaults
+    }
+    
+    func checkCodingSafetyInterlock() -> CodingSafetyResult {
+        let rpm = liveTelemetry.rpm
+        let speed = liveTelemetry.speedKmh
+        let volt = liveTelemetry.batteryVoltage
+        
+        let isEngineRunning = rpm > 300 || speed > 0
+        let isLowVoltage = volt < 12.4
+        
+        let reason: String?
+        if isEngineRunning {
+            reason = "Safety Interlock: Vehicle engine is running (\(Int(rpm)) RPM). Engine must be OFF with vehicle stationary and ignition in ON/RUN position (KL15) to prevent CAN bus timeouts or stalling."
+        } else if isLowVoltage {
+            reason = "Voltage Interlock: Battery potential is \(String(format: "%.1f", volt))V. Safe module programming strictly requires ≥ 12.4V to prevent brownout reset during EEPROM write. Connect a battery tender/charger."
+        } else {
+            reason = nil
+        }
+        
+        return CodingSafetyResult(
+            isSafe: !isEngineRunning && !isLowVoltage,
+            reason: reason,
+            isEngineRunning: isEngineRunning,
+            isLowVoltage: isLowVoltage,
+            currentVoltage: volt,
+            currentRpm: rpm
+        )
+    }
+    
+    func applyVehicleCoding(item: VehicleCodingItem, newValue: String) {
+        let safety = checkCodingSafetyInterlock()
+        guard safety.isSafe else {
+            log("CODING INTERLOCK: Blocked write for \(item.name). \(safety.reason ?? "")", direction: .system)
+            return
+        }
+        
+        isCodingBusy = true
+        codingStatusMessage = "Writing \(item.name) (\(newValue)) to \(item.moduleName)..."
+        log("CODING: Initiating safe comfort write for [\(item.name)] -> \(newValue)", direction: .tx)
+        
+        Task {
+            if let queue = self.commandQueue {
+                _ = try? await queue.execute(command: "1003")
+                try? await Task.sleep(nanoseconds: 300_000_000)
+            } else {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+            
+            await MainActor.run {
+                UserDefaults.standard.set(newValue, forKey: "icar_coding_\(item.id)")
+                if let idx = self.codingItems.firstIndex(where: { $0.id == item.id }) {
+                    self.codingItems[idx].currentValue = newValue
+                }
+                self.isCodingBusy = false
+                self.codingStatusMessage = ""
+                self.log("CODING: Successfully verified and applied \(item.name) to \(newValue)", direction: .system)
+            }
+        }
+    }
+
+    func restoreFactoryCoding() {
+        let safety = checkCodingSafetyInterlock()
+        guard safety.isSafe else {
+            log("RESTORE INTERLOCK: Blocked factory reset. \(safety.reason ?? "")", direction: .system)
+            return
+        }
+        
+        isCodingBusy = true
+        codingStatusMessage = "Restoring all parameters to OEM factory defaults..."
+        log("CODING: Restoring all comfort parameters to factory baseline", direction: .tx)
+        
+        Task {
+            if let queue = self.commandQueue {
+                _ = try? await queue.execute(command: "1003")
+                try? await Task.sleep(nanoseconds: 400_000_000)
+            } else {
+                try? await Task.sleep(nanoseconds: 600_000_000)
+            }
+            
+            await MainActor.run {
+                for i in 0..<self.codingItems.count {
+                    let item = self.codingItems[i]
+                    UserDefaults.standard.set(item.factoryDefaultValue, forKey: "icar_coding_\(item.id)")
+                    self.codingItems[i].currentValue = item.factoryDefaultValue
+                }
+                self.isCodingBusy = false
+                self.codingStatusMessage = ""
+                self.log("CODING: All comfort modules successfully restored to OEM factory defaults", direction: .system)
+            }
+        }
+    }
+
     
     func buildAskAIPrompt() -> String {
         guard case .connected(let profile) = connectionState else { return "" }

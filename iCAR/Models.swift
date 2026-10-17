@@ -106,3 +106,46 @@ struct FlightLogEntry: Identifiable {
         case system
     }
 }
+
+struct SmogMonitorItem: Identifiable, Hashable {
+    var id: String { name }
+    let name: String
+    let isReady: Bool
+    let isSupported: Bool
+}
+
+struct ECUDeepInfo {
+    var calibrationId: String = "Not Reported by ECU"
+    var calibrationVerificationNumber: String = "Not Reported by ECU"
+    var ecuName: String = "Not Reported by ECU"
+    var distanceWithMILKm: Double? = nil
+    var distanceSinceDTCClearedKm: Double? = nil
+    var warmupsSinceDTCCleared: Int? = nil
+    var engineRunTimeSeconds: Int? = nil
+    var controlModuleVoltage: Double? = nil
+    var smogMonitors: [SmogMonitorItem] = []
+    var isMILActive: Bool = false
+    var dtcCount: Int = 0
+}
+
+struct CodingSafetyResult {
+    let isSafe: Bool
+    let reason: String?
+    let isEngineRunning: Bool
+    let isLowVoltage: Bool
+    let currentVoltage: Double
+    let currentRpm: Double
+}
+
+struct VehicleCodingItem: Identifiable {
+    let id: String
+    let name: String
+    let description: String
+    let moduleName: String
+    let icon: String
+    let options: [String]
+    var currentValue: String
+    let factoryDefaultValue: String
+    let isToggle: Bool
+}
+

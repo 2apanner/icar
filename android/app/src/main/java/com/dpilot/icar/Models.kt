@@ -64,3 +64,44 @@ sealed class ConnectionState {
     data class Connected(val profile: VehicleProfile) : ConnectionState()
     data class Error(val message: String) : ConnectionState()
 }
+
+data class SmogMonitorItem(
+    val name: String,
+    val isReady: Boolean,
+    val isSupported: Boolean
+)
+
+data class ECUDeepInfo(
+    val calibrationId: String = "Not Reported by ECU",
+    val calibrationVerificationNumber: String = "Not Reported by ECU",
+    val ecuName: String = "Not Reported by ECU",
+    val distanceWithMILKm: Double? = null,
+    val distanceSinceDTCClearedKm: Double? = null,
+    val warmupsSinceDTCCleared: Int? = null,
+    val engineRunTimeSeconds: Int? = null,
+    val controlModuleVoltage: Double? = null,
+    val smogMonitors: List<SmogMonitorItem> = emptyList(),
+    val isMILActive: Boolean = false,
+    val dtcCount: Int = 0
+)
+
+data class VehicleCodingItem(
+    val id: String,
+    val name: String,
+    val description: String,
+    val moduleName: String,
+    val options: List<String>,
+    val currentValue: String,
+    val factoryDefaultValue: String,
+    val isToggle: Boolean = false
+)
+
+data class CodingSafetyCheck(
+    val isSafeToCode: Boolean,
+    val reason: String?,
+    val isEngineRunning: Boolean,
+    val isVoltageLow: Boolean,
+    val currentVoltage: Double,
+    val currentRpm: Double
+)
+

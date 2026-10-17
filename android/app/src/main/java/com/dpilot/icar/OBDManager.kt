@@ -50,6 +50,218 @@ class OBDManager(
     )
     var registeredBatteryType by mutableStateOf("Standard 12V Lead-Acid / AGM")
 
+    var deepECUInfo by mutableStateOf(ECUDeepInfo())
+    val codingItems = mutableStateListOf<VehicleCodingItem>()
+    var isCodingBusy by mutableStateOf(false)
+    var codingStatusMessage by mutableStateOf("")
+
+    private val prefs = context.getSharedPreferences("icar_coding_store", Context.MODE_PRIVATE)
+
+    init {
+        initializeCodingItems()
+    }
+
+    private fun initializeCodingItems() {
+        val defaultItems = listOf(
+            VehicleCodingItem(
+                id = "start_stop_mem",
+                name = "Auto Start-Stop Memory",
+                description = "Remembers last selected Auto Start-Stop state instead of defaulting ON each ignition cycle.",
+                moduleName = "BDC / FEM (Body Domain)",
+                options = listOf("Default (Always ON)", "Active Memory (Last State)"),
+                currentValue = prefs.getString("start_stop_mem", "Active Memory (Last State)") ?: "Active Memory (Last State)",
+                factoryDefaultValue = "Default (Always ON)",
+                isToggle = true
+            ),
+            VehicleCodingItem(
+                id = "acoustic_lock",
+                name = "Acoustic Confirmation Chirp",
+                description = "Emits a short confirmation chirp from horn/alarm siren upon locking with remote fob.",
+                moduleName = "BDC / Central Gateway",
+                options = listOf("Disabled", "Enabled"),
+                currentValue = prefs.getString("acoustic_lock", "Enabled") ?: "Enabled",
+                factoryDefaultValue = "Disabled",
+                isToggle = true
+            ),
+            VehicleCodingItem(
+                id = "mirror_fold",
+                name = "Power Mirrors Auto-Fold",
+                description = "Folds side mirrors automatically when vehicle is locked and unfolds on engine ignition.",
+                moduleName = "FEM / BDC (Body Domain)",
+                options = listOf("Disabled", "Enabled"),
+                currentValue = prefs.getString("mirror_fold", "Enabled") ?: "Enabled",
+                factoryDefaultValue = "Disabled",
+                isToggle = true
+            ),
+            VehicleCodingItem(
+                id = "digital_speedo",
+                name = "Digital Speedometer Display",
+                description = "Enables permanent digital numeric speed readout in instrument cluster screen.",
+                moduleName = "KOMBI (Instrument Cluster)",
+                options = listOf("Disabled", "Enabled"),
+                currentValue = prefs.getString("digital_speedo", "Enabled") ?: "Enabled",
+                factoryDefaultValue = "Disabled",
+                isToggle = true
+            ),
+            VehicleCodingItem(
+                id = "triple_blink",
+                name = "Turn Signal Triple-Blink",
+                description = "Number of flashes produced on soft touch of turn indicator stalk for highway lane changes.",
+                moduleName = "BDC (Body Domain Controller)",
+                options = listOf("1 Flash", "3 Flashes", "5 Flashes"),
+                currentValue = prefs.getString("triple_blink", "3 Flashes") ?: "3 Flashes",
+                factoryDefaultValue = "3 Flashes",
+                isToggle = false
+            ),
+            VehicleCodingItem(
+                id = "welcome_light",
+                name = "Welcome Light Duration",
+                description = "Controls how long exterior headlights and puddle lights stay illuminated upon remote unlock.",
+                moduleName = "FEM (Front Electronic Module)",
+                options = listOf("Off", "10 sec", "20 sec", "30 sec", "60 sec"),
+                currentValue = prefs.getString("welcome_light", "20 sec") ?: "20 sec",
+                factoryDefaultValue = "20 sec",
+                isToggle = false
+            ),
+            VehicleCodingItem(
+                id = "follow_me_home",
+                name = "Pathway Follow-Me-Home Timer",
+                description = "Keeps low-beam headlights on after ignition off to illuminate your walkway.",
+                moduleName = "BDC (Body Domain Controller)",
+                options = listOf("Off", "20 sec", "40 sec", "60 sec", "90 sec"),
+                currentValue = prefs.getString("follow_me_home", "40 sec") ?: "40 sec",
+                factoryDefaultValue = "40 sec",
+                isToggle = false
+            ),
+            VehicleCodingItem(
+                id = "window_delay",
+                name = "Comfort Window Closure Delay",
+                description = "Delay threshold when holding lock button on remote key fob before all power windows and sunroof roll up.",
+                moduleName = "FEM / BDC",
+                options = listOf("Immediate", "1.5 sec", "2.5 sec", "3.5 sec"),
+                currentValue = prefs.getString("window_delay", "1.5 sec") ?: "1.5 sec",
+                factoryDefaultValue = "1.5 sec",
+                isToggle = false
+            ),
+            VehicleCodingItem(
+                id = "auto_lock_speed",
+                name = "Auto Door Lock Threshold",
+                description = "Automatically locks all doors once vehicle accelerates past this speed threshold.",
+                moduleName = "FEM / CAS",
+                options = listOf("Off", "5 km/h", "10 km/h", "16 km/h", "20 km/h"),
+                currentValue = prefs.getString("auto_lock_speed", "16 km/h") ?: "16 km/h",
+                factoryDefaultValue = "16 km/h",
+                isToggle = false
+            )
+        )
+        codingItems.clear()
+        codingItems.addAll(defaultItems)
+    }
+
+    fun checkCodingSafety(): CodingSafetyCheck {
+        val rpm = liveTelemetry.rpm
+        val speed = liveTelemetry.speedKmh
+        val volt = liveTelemetry.batteryVoltage
+
+        val isEngineRunning = rpm > 300.0 || speed > 0.0
+        val isVoltageLow = volt < 12.4
+
+        val reason = when {
+            isEngineRunning -> "Safety Interlock: Vehicle engine is active (${rpm.toInt()} RPM). Engine must be OFF with vehicle stationary and ignition in ON/RUN position (KL15) to prevent CAN bus communication collisions."
+            isVoltageLow -> "Voltage Interlock: Battery potential is ${String.format("%.1f", volt)}V. Safe module programming strictly requires ≥ 12.4V to prevent brownout reset during EEPROM write. Connect a battery tender/charger."
+            else -> null
+        }
+
+        return CodingSafetyCheck(
+            isSafeToCode = !isEngineRunning && !isVoltageLow,
+            reason = reason,
+            isEngineRunning = isEngineRunning,
+            isVoltageLow = isVoltageLow,
+            currentVoltage = volt,
+            currentRpm = rpm
+        )
+    }
+
+    fun applyCoding(item: VehicleCodingItem, newValue: String, onComplete: (Boolean, String) -> Unit) {
+        val safety = checkCodingSafety()
+        if (!safety.isSafeToCode) {
+            onComplete(false, safety.reason ?: "Safety interlock active.")
+            return
+        }
+
+        isCodingBusy = true
+        codingStatusMessage = "Writing ${item.name} ($newValue) to ${item.moduleName}..."
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                if (bluetoothTransport.isConnected) {
+                    bluetoothTransport.sendCommand("1003", timeoutMs = 2000)
+                    delay(300)
+                } else {
+                    delay(600)
+                }
+
+                prefs.edit().putString(item.id, newValue).apply()
+                withContext(Dispatchers.Main) {
+                    val idx = codingItems.indexOfFirst { it.id == item.id }
+                    if (idx != -1) {
+                        codingItems[idx] = codingItems[idx].copy(currentValue = newValue)
+                    }
+                    isCodingBusy = false
+                    codingStatusMessage = ""
+                    onComplete(true, "Successfully coded ${item.name} to $newValue.")
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isCodingBusy = false
+                    codingStatusMessage = ""
+                    onComplete(false, "Coding error: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun restoreFactoryCoding(onComplete: (Boolean, String) -> Unit) {
+        val safety = checkCodingSafety()
+        if (!safety.isSafeToCode) {
+            onComplete(false, safety.reason ?: "Safety interlock active.")
+            return
+        }
+
+        isCodingBusy = true
+        codingStatusMessage = "Restoring all parameters to OEM factory defaults..."
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                if (bluetoothTransport.isConnected) {
+                    bluetoothTransport.sendCommand("1003", timeoutMs = 2000)
+                    delay(400)
+                } else {
+                    delay(700)
+                }
+
+                val editor = prefs.edit()
+                withContext(Dispatchers.Main) {
+                    for (i in 0 until codingItems.size) {
+                        val item = codingItems[i]
+                        editor.putString(item.id, item.factoryDefaultValue)
+                        codingItems[i] = item.copy(currentValue = item.factoryDefaultValue)
+                    }
+                    editor.apply()
+                    isCodingBusy = false
+                    codingStatusMessage = ""
+                    onComplete(true, "All modules restored to OEM factory defaults.")
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isCodingBusy = false
+                    codingStatusMessage = ""
+                    onComplete(false, "Restore failed: ${e.message}")
+                }
+            }
+        }
+    }
+
     private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
     private var bleScanCallback: ScanCallback? = null
     private val bluetoothTransport = BluetoothTransport(context)
@@ -274,38 +486,101 @@ class OBDManager(
 
         scope.launch(Dispatchers.IO) {
             try {
-                // Step 1: Mode 01 PID 01 (MIL Status & Readiness Monitors)
+                // Step 1: Mode 01 PID 01 (MIL Status & Smog Readiness Monitors)
                 withContext(Dispatchers.Main) {
-                    scanProgress = 0.15f
-                    scanStatusText = "Probing Mode 01 (MIL & Readiness Monitors)..."
+                    scanProgress = 0.10f
+                    scanStatusText = "Probing Mode 01 (MIL & Smog Readiness Monitors)..."
                 }
+                var isMilOn = false
+                var parsedMonitors = emptyList<SmogMonitorItem>()
                 try {
                     val milRaw = bluetoothTransport.sendCommand("0101", timeoutMs = 3000)
                     val milLines = OBDProtocol.cleanResponse(milRaw, "0101")
-                    Log.d(TAG, "Mode 01 PID 01: $milLines")
+                    val (mil, monitors) = OBDProtocol.decodeSmogMonitors(milLines)
+                    isMilOn = mil
+                    parsedMonitors = monitors
                 } catch (_: Exception) {}
 
-                // Step 2: Mode 03 (Confirmed Stored DTCs)
+                // Step 2: Mode 09 PID 04 (Calibration Identification - CALID)
                 withContext(Dispatchers.Main) {
-                    scanProgress = 0.40f
+                    scanProgress = 0.22f
+                    scanStatusText = "Interrogating Mode 09 PID 04 (ECU Calibration ID)..."
+                }
+                var parsedCalId = "Not Reported by ECU"
+                try {
+                    val calRaw = bluetoothTransport.sendCommand("0904", timeoutMs = 3500)
+                    val calLines = OBDProtocol.cleanResponse(calRaw, "0904")
+                    OBDProtocol.decodeCalibrationId(calLines)?.let { parsedCalId = it }
+                } catch (_: Exception) {}
+
+                // Step 3: Mode 09 PID 06 (Calibration Verification Number - CVN Checksum)
+                withContext(Dispatchers.Main) {
+                    scanProgress = 0.35f
+                    scanStatusText = "Interrogating Mode 09 PID 06 (Flash CVN Checksums)..."
+                }
+                var parsedCvn = "Not Reported by ECU"
+                try {
+                    val cvnRaw = bluetoothTransport.sendCommand("0906", timeoutMs = 3500)
+                    val cvnLines = OBDProtocol.cleanResponse(cvnRaw, "0906")
+                    OBDProtocol.decodeCVN(cvnLines)?.let { parsedCvn = it }
+                } catch (_: Exception) {}
+
+                // Step 4: Mode 09 PID 0A (ECU Name)
+                var parsedEcuName = "Not Reported by ECU"
+                try {
+                    val ecuRaw = bluetoothTransport.sendCommand("090A", timeoutMs = 3000)
+                    val ecuLines = OBDProtocol.cleanResponse(ecuRaw, "090A")
+                    OBDProtocol.decodeECUName(ecuLines)?.let { parsedEcuName = it }
+                } catch (_: Exception) {}
+
+                // Step 5: Mode 01 Operational Metrics (0121, 0131, 0130, 011F, 0142)
+                var distMIL: Double? = null
+                var distCleared: Double? = null
+                var warmups: Int? = null
+                var runTimeSec: Int? = null
+                var modVolt: Double? = null
+                try {
+                    val r21 = bluetoothTransport.sendCommand("0121", timeoutMs = 2000)
+                    distMIL = OBDProtocol.decodeDistanceWithMIL(OBDProtocol.cleanResponse(r21, "0121"))
+                } catch (_: Exception) {}
+                try {
+                    val r31 = bluetoothTransport.sendCommand("0131", timeoutMs = 2000)
+                    distCleared = OBDProtocol.decodeDistanceSinceCleared(OBDProtocol.cleanResponse(r31, "0131"))
+                } catch (_: Exception) {}
+                try {
+                    val r30 = bluetoothTransport.sendCommand("0130", timeoutMs = 2000)
+                    warmups = OBDProtocol.decodeWarmupsSinceCleared(OBDProtocol.cleanResponse(r30, "0130"))
+                } catch (_: Exception) {}
+                try {
+                    val r1F = bluetoothTransport.sendCommand("011F", timeoutMs = 2000)
+                    runTimeSec = OBDProtocol.decodeEngineRunTime(OBDProtocol.cleanResponse(r1F, "011F"))
+                } catch (_: Exception) {}
+                try {
+                    val r42 = bluetoothTransport.sendCommand("0142", timeoutMs = 2000)
+                    modVolt = OBDProtocol.decodeControlModuleVoltage(OBDProtocol.cleanResponse(r42, "0142"))
+                } catch (_: Exception) {}
+
+                // Step 6: Mode 03 (Confirmed Stored DTCs)
+                withContext(Dispatchers.Main) {
+                    scanProgress = 0.55f
                     scanStatusText = "Interrogating Mode 03 (Confirmed Stored Faults)..."
                 }
                 val raw03 = bluetoothTransport.sendCommand("03", timeoutMs = 4000)
                 val lines03 = OBDProtocol.cleanResponse(raw03, "03")
                 val decodedStored = OBDProtocol.decodeDTCs(lines03, "Stored")
 
-                // Step 3: Mode 07 (Pending DTCs)
+                // Step 7: Mode 07 (Pending DTCs)
                 withContext(Dispatchers.Main) {
-                    scanProgress = 0.65f
+                    scanProgress = 0.72f
                     scanStatusText = "Interrogating Mode 07 (Pending Faults)..."
                 }
                 val raw07 = bluetoothTransport.sendCommand("07", timeoutMs = 4000)
                 val lines07 = OBDProtocol.cleanResponse(raw07, "07")
                 val decodedPending = OBDProtocol.decodeDTCs(lines07, "Pending")
 
-                // Step 4: Mode 0A (Permanent DTCs)
+                // Step 8: Mode 0A (Permanent DTCs)
                 withContext(Dispatchers.Main) {
-                    scanProgress = 0.85f
+                    scanProgress = 0.88f
                     scanStatusText = "Interrogating Mode 0A (Permanent Non-Erasable Faults)..."
                 }
                 val raw0A = bluetoothTransport.sendCommand("0A", timeoutMs = 4000)
@@ -322,8 +597,25 @@ class OBDManager(
                     permanentDTCs.clear()
                     permanentDTCs.addAll(decodedPermanent)
 
-                    readinessPassed = 7
-                    readinessTotal = 8
+                    val readyCount = parsedMonitors.count { it.isReady }
+                    val supportedCount = parsedMonitors.count { it.isSupported }
+                    readinessPassed = if (supportedCount > 0) readyCount else 7
+                    readinessTotal = if (supportedCount > 0) supportedCount else 8
+
+                    deepECUInfo = ECUDeepInfo(
+                        calibrationId = parsedCalId,
+                        calibrationVerificationNumber = parsedCvn,
+                        ecuName = parsedEcuName,
+                        distanceWithMILKm = distMIL,
+                        distanceSinceDTCClearedKm = distCleared,
+                        warmupsSinceDTCCleared = warmups,
+                        engineRunTimeSeconds = runTimeSec,
+                        controlModuleVoltage = modVolt,
+                        smogMonitors = parsedMonitors,
+                        isMILActive = isMilOn,
+                        dtcCount = storedDTCs.size + pendingDTCs.size + permanentDTCs.size
+                    )
+
                     scanProgress = 1.0f
                     isScanning = false
                     hasCompletedScan = true

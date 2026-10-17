@@ -329,4 +329,127 @@ enum OBDPIDDecoder {
         
         return (make, year, region)
     }
+    
+    // MARK: - Mode 09 & Mode 01 Extended ECU Intelligence
+    
+    static func decodeCalibrationId(rawString: String) -> String? {
+        let lines = rawString.components(separatedBy: CharacterSet.newlines)
+        var asciiChars = ""
+        for line in lines {
+            let clean = line.replacingOccurrences(of: "^[0-9A-Fa-f]:", with: "", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+            let tokens = clean.components(separatedBy: " ").filter { $0.count == 2 && UInt8($0, radix: 16) != nil }
+            for token in tokens {
+                if let val = UInt8(token, radix: 16) {
+                    if val >= 0x20 && val <= 0x7E {
+                        asciiChars.append(Character(UnicodeScalar(val)))
+                    } else if val == 0x00 && !asciiChars.isEmpty && !asciiChars.hasSuffix(" ") {
+                        asciiChars.append(" ")
+                    }
+                }
+            }
+        }
+        var cleaned = asciiChars.trimmingCharacters(in: .whitespaces)
+        if cleaned.hasPrefix("I") { cleaned = String(cleaned.dropFirst()).trimmingCharacters(in: .whitespaces) }
+        if cleaned.hasPrefix("04") { cleaned = String(cleaned.dropFirst(2)).trimmingCharacters(in: .whitespaces) }
+        return cleaned.isEmpty ? nil : cleaned
+    }
+    
+    static func decodeCVN(rawString: String) -> String? {
+        let lines = rawString.components(separatedBy: CharacterSet.newlines)
+        var hexBytes: [String] = []
+        for line in lines {
+            let clean = line.replacingOccurrences(of: "^[0-9A-Fa-f]:", with: "", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+            let tokens = clean.components(separatedBy: " ").filter { $0.count == 2 && UInt8($0, radix: 16) != nil }
+            if let idx = tokens.firstIndex(where: { $0.caseInsensitiveCompare("49") == .orderedSame }), idx + 3 < tokens.count {
+                hexBytes.append(contentsOf: tokens.suffix(from: idx + 3))
+            } else {
+                hexBytes.append(contentsOf: tokens)
+            }
+        }
+        if hexBytes.count >= 4 {
+            var checksums: [String] = []
+            var i = 0
+            while i + 3 < hexBytes.count {
+                let word = "\(hexBytes[i])\(hexBytes[i+1])\(hexBytes[i+2])\(hexBytes[i+3])".uppercased()
+                if word != "00000000" {
+                    checksums.append(word)
+                }
+                i += 4
+            }
+            if !checksums.isEmpty {
+                return checksums.joined(separator: " · ")
+            }
+        }
+        return nil
+    }
+    
+    static func decodeECUName(rawString: String) -> String? {
+        let lines = rawString.components(separatedBy: CharacterSet.newlines)
+        var asciiChars = ""
+        for line in lines {
+            let clean = line.replacingOccurrences(of: "^[0-9A-Fa-f]:", with: "", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+            let tokens = clean.components(separatedBy: " ").filter { $0.count == 2 && UInt8($0, radix: 16) != nil }
+            for token in tokens {
+                if let val = UInt8(token, radix: 16), val >= 0x20 && val <= 0x7E {
+                    asciiChars.append(Character(UnicodeScalar(val)))
+                }
+            }
+        }
+        let res = asciiChars.trimmingCharacters(in: .whitespaces)
+        return res.isEmpty ? nil : res
+    }
+    
+    static func decodeDistanceWithMIL(bytes: [UInt8]) -> Double? {
+        // PID 21: (A * 256) + B km
+        guard bytes.count >= 2 else { return nil }
+        return (Double(bytes[0]) * 256.0) + Double(bytes[1])
+    }
+    
+    static func decodeDistanceSinceCleared(bytes: [UInt8]) -> Double? {
+        // PID 31: (A * 256) + B km
+        guard bytes.count >= 2 else { return nil }
+        return (Double(bytes[0]) * 256.0) + Double(bytes[1])
+    }
+    
+    static func decodeWarmupsSinceCleared(bytes: [UInt8]) -> Int? {
+        // PID 30: A
+        guard let a = bytes.first else { return nil }
+        return Int(a)
+    }
+    
+    static func decodeEngineRunTime(bytes: [UInt8]) -> Int? {
+        // PID 1F: (A * 256) + B seconds
+        guard bytes.count >= 2 else { return nil }
+        return (Int(bytes[0]) * 256) + Int(bytes[1])
+    }
+    
+    static func decodeControlModuleVoltage(bytes: [UInt8]) -> Double? {
+        // PID 42: ((A * 256) + B) / 1000.0 V
+        guard bytes.count >= 2 else { return nil }
+        return ((Double(bytes[0]) * 256.0) + Double(bytes[1])) / 1000.0
+    }
+    
+    static func decodeSmogMonitors(bytes: [UInt8]) -> (isMILActive: Bool, monitors: [SmogMonitorItem]) {
+        guard bytes.count >= 4 else { return (false, []) }
+        let byteA = bytes[0]
+        let byteB = bytes[1]
+        let byteC = bytes[2]
+        let byteD = bytes[3]
+        
+        let milOn = (byteA & 0x80) != 0
+        var monitors: [SmogMonitorItem] = []
+        
+        monitors.append(SmogMonitorItem(name: "Misfire Monitor", isReady: (byteB & 0x10) == 0, isSupported: (byteB & 0x01) != 0))
+        monitors.append(SmogMonitorItem(name: "Fuel System", isReady: (byteB & 0x20) == 0, isSupported: (byteB & 0x02) != 0))
+        monitors.append(SmogMonitorItem(name: "Comprehensive Component", isReady: (byteB & 0x40) == 0, isSupported: (byteB & 0x04) != 0))
+        monitors.append(SmogMonitorItem(name: "Catalyst Monitor", isReady: (byteC & 0x02) == 0, isSupported: (byteC & 0x01) != 0))
+        monitors.append(SmogMonitorItem(name: "Evaporative System", isReady: (byteC & 0x08) == 0, isSupported: (byteC & 0x04) != 0))
+        monitors.append(SmogMonitorItem(name: "Secondary Air System", isReady: (byteC & 0x20) == 0, isSupported: (byteC & 0x10) != 0))
+        monitors.append(SmogMonitorItem(name: "Oxygen Sensor", isReady: (byteD & 0x02) == 0, isSupported: (byteD & 0x01) != 0))
+        monitors.append(SmogMonitorItem(name: "Oxygen Sensor Heater", isReady: (byteD & 0x08) == 0, isSupported: (byteD & 0x04) != 0))
+        monitors.append(SmogMonitorItem(name: "EGR / VVT System", isReady: (byteD & 0x20) == 0, isSupported: (byteD & 0x10) != 0))
+        
+        return (milOn, monitors)
+    }
 }
+
